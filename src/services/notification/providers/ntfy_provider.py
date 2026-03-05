@@ -43,6 +43,9 @@ class NtfyProvider(INotificationProvider):
                 if resp.status_code == 200:
                     log.debug(f"Ntfy sent: {title}")
                     return True
+                elif resp.status_code == 429:
+                    log.debug(f"Ntfy rate limited (429): Quota reached. Muted to prevent spam.")
+                    return False
                 else:
                     log.error(f"Ntfy failed ({resp.status_code}): {resp.text}")
                     return False
