@@ -31,21 +31,29 @@ class TimeSkewGuard:
                     continue
 
                 diff = (server_time - local_time).total_seconds()
-                self.last_skew = diff
+                
+                # MT5 Broker time is usually UTC+2 or UTC+3, while local_time is UTC.
+                # E.g. 7200 seconds of skew is normal. We should track *drift* from baseline.
+                if not hasattr(self, 'baseline_offset'):
+                    self.baseline_offset = diff
+                    log.info(f"TimeSkewGuard: Baseline Broker offset established at {self.baseline_offset:.2f}s")
 
-                if abs(diff) > self.max_skew_sec:
+                drift = diff - self.baseline_offset
+                self.last_skew = drift
+
+                if abs(drift) > self.max_skew_sec:
                     if self.status == "OK":
                         self.status = "ALERT"
-                        msg = f"Time Skew Detected! Server: {server_time}, Local: {local_time}, Diff: {diff:.2f}s"
+                        msg = f"Time Drift Detected! Server: {server_time}, Local: {local_time}, Drift: {drift:.2f}s (Raw Diff: {diff:.2f}s)"
                         log.critical(msg)
                         
-                        event = TimeSkewDetected(server_time=str(server_time), local_time=str(local_time), diff_seconds=diff, component="TimeSkewGuard")
+                        event = TimeSkewDetected(server_time=str(server_time), local_time=str(local_time), diff_seconds=drift, component="TimeSkewGuard")
                         await event_bus.publish(event)
-                        await notification_service.send_alert("CRITICAL: TIME SKEW", msg, severity="CRITICAL")
+                        await notification_service.send_alert("CRITICAL: TIME DRIFT", msg, severity="CRITICAL")
                 else:
                     if self.status == "ALERT":
                         self.status = "OK"
-                        log.info("Time Skew Recovered.")
+                        log.info("Time Drift Recovered.")
 
             except Exception as e:
                 log.error(f"TimeSkewGuard Error: {e}")

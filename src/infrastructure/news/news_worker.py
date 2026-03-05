@@ -55,7 +55,7 @@ class NewsWorker:
         
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=10) as response:
+                async with session.get(url, timeout=10, ssl=False) as response:
                     if response.status == 200:
                         data = await response.json()
                         self._parse_events(data)
