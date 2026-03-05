@@ -13,3 +13,4 @@ cryptography
 httpx
 loguru
 aiohttp
+aiosqlite
