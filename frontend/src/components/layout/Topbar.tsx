@@ -3,6 +3,7 @@ import { Moon, Sun, Bell, Settings, BookOpen, Play, Square, Zap } from 'lucide-r
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
 import { api } from '../../services/api';
+import { WS_URL } from '../../services/config';
 import type { UniverseConfig, EngineState } from '../../services/api';
 
 interface TopbarProps {
@@ -61,8 +62,7 @@ export const Topbar: React.FC<TopbarProps> = ({ isManualOpen, setIsManualOpen, i
         fetchAccountInfo(); // initial fetch
 
         // Listen to Websocket for Live Updates
-        const wsUrl = `ws://${window.location.hostname}:8001/ws`;
-        const ws = new WebSocket(wsUrl);
+        const ws = new WebSocket(WS_URL);
 
         ws.onmessage = (event) => {
             try {
