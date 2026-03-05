@@ -1,0 +1,110 @@
+{
+  "hard_risk_cap_money": 50.0,
+  "max_trades_open": 10,
+  "max_trades_per_asset": 1,
+  "max_daily_dd_pct": 0.05,
+  "news_filter_active": true,
+  "spread_guard_active": true,
+  "max_lot_size": 0.15,
+  "profiles": {
+    "FOREX": {
+      "type": "FOREX",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 200,
+      "slippage_buffer_points": 100,
+      "min_score_to_trade": 75.0,
+      "active": true
+    },
+    "CRYPTO": {
+      "type": "CRYPTO",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 5000,
+      "slippage_buffer_points": 1500,
+      "min_score_to_trade": 70.0,
+      "active": false
+    },
+    "INDICES_NY": {
+      "type": "INDICES_NY",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 400,
+      "slippage_buffer_points": 200,
+      "min_score_to_trade": 65.0,
+      "active": true
+    },
+    "INDICES_B3": {
+      "type": "INDICES_B3",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 25,
+      "slippage_buffer_points": 10,
+      "min_score_to_trade": 65.0,
+      "active": true
+    },
+    "INDICES_EU": {
+      "type": "INDICES_EU",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 400,
+      "slippage_buffer_points": 200,
+      "min_score_to_trade": 65.0,
+      "active": true
+    },
+    "METALS": {
+      "type": "METALS",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 500,
+      "slippage_buffer_points": 150,
+      "min_score_to_trade": 65.0,
+      "active": false
+    },
+    "COMMODITIES_AGRI": {
+      "type": "COMMODITIES_AGRI",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 2000,
+      "slippage_buffer_points": 100,
+      "min_score_to_trade": 30.0,
+      "active": true
+    },
+    "COMMODITIES_ENERGY": {
+      "type": "COMMODITIES_ENERGY",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 5000,
+      "slippage_buffer_points": 150,
+      "min_score_to_trade": 30.0,
+      "active": true
+    },
+    "STOCKS_US": {
+      "type": "STOCKS_US",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 25,
+      "slippage_buffer_points": 10,
+      "min_score_to_trade": 75.0,
+      "active": true
+    },
+    "STOCKS_BR": {
+      "type": "STOCKS_BR",
+      "max_risk_per_trade_pct": 0.02,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 15,
+      "slippage_buffer_points": 10,
+      "min_score_to_trade": 70.0,
+      "active": true
+    },
+    "STOCKS_EU": {
+      "type": "STOCKS_EU",
+      "max_risk_per_trade_pct": 0.01,
+      "max_daily_dd_pct": 0.05,
+      "spread_max_points": 25,
+      "slippage_buffer_points": 10,
+      "min_score_to_trade": 75.0,
+      "active": true
+    }
+  }
+}

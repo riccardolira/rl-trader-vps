@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* LIGHT MODE: Paper/Clean High-End */
+    --background: 210 20% 98%;
+    /* Off-white paper cool */
+    --foreground: 224 71% 4%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+
+    --primary: 220 50% 20%;
+    /* Deep Navy for primary actions (Classy) */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 220 14% 94%;
+    /* Very subtle cool gray */
+    --secondary-foreground: 220.9 39.3% 11%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 8.9% 46.1%;
+
+    --accent: 220 14% 94%;
+    --accent-foreground: 220.9 39.3% 11%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 13% 90%;
+    /* Softer border */
+    --input: 220 13% 90%;
+    --ring: 224 71% 4%;
+
+    --radius: 0.5rem;
+
+    /* Status Colors - Clean Pills */
+    --success: 142 71% 45%;
+    --success-foreground: 142 71% 10%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 10%;
+
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 84% 10%;
+  }
+
+  .dark {
+    /* DARK MODE: Professional Neutral (Less Blue) */
+    --background: 224 10% 10%;
+    /* Nearly neutral dark */
+    --foreground: 210 20% 98%;
+
+    --card: 224 10% 12%;
+    /* Subtle differentiation */
+    --card-foreground: 210 20% 98%;
+
+    --popover: 224 10% 12%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 210 20% 98%;
+    /* White/Off-white primary for high contrast */
+    --primary-foreground: 220.9 39.3% 11%;
+
+    --secondary: 215 15% 18%;
+    /* Subtle dark gray */
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 215 15% 18%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 215 15% 18%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 215 15% 18%;
+    --input: 215 15% 18%;
+    --ring: 216 34% 17%;
+  }
+}
+
+@layer components {
+  /* Badges - Standardized Pills */
+  .badge {
+    @apply inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border;
+  }
+  .badge-success {
+    @apply bg-emerald-500/10 text-emerald-500 border-emerald-500/20;
+  }
+  .badge-danger {
+    @apply bg-rose-500/10 text-rose-500 border-rose-500/20;
+  }
+  .badge-warning {
+    @apply bg-amber-500/10 text-amber-500 border-amber-500/20;
+  }
+  .badge-info {
+    @apply bg-primary/10 text-primary border-primary/20;
+  }
+  .badge-neutral {
+    @apply bg-neutral-500/10 text-neutral-500 border-neutral-500/20;
+  }
+
+  /* Cards - Standardized Containers */
+  .card-premium {
+    @apply bg-card border border-border/50 rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] transition-all duration-200;
+  }
+  .card-interactive {
+    @apply card-premium hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 cursor-pointer;
+  }
+
+  /* Buttons - Standardized Actions */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold text-sm hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2;
+  }
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-bold text-sm hover:bg-secondary/80 transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}

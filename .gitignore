@@ -1,0 +1,38 @@
+# Bot Python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+logs/
+*.log
+
+# C environment
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite databases
+*.sqlite3
+*.db
+
+# Frontend
+node_modules/
+dist/
+build/
+.next/
+*.local
+
+# System files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Ignore sensitive configuration files (You should use environment variables or a specific config not tracked by Git for passwords)
+# If you have specific files with passwords, add them here.

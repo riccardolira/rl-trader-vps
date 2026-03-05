@@ -1,0 +1,190 @@
+{
+  "scanner_enabled": true,
+  "selection_mode": "AUTO",
+  "manual_basket": [],
+  "classes_enabled": {
+    "FOREX": true,
+    "METALS": true,
+    "CRYPTO": true,
+    "INDICES": false,
+    "COMMODITIES": true,
+    "STOCKS_US": false,
+    "STOCKS_BR": true,
+    "STOCKS_EU": false,
+    "INDICES_NY": false,
+    "INDICES_B3": false,
+    "INDICES_EU": false,
+    "COMMODITIES_AGRI": false,
+    "COMMODITIES_ENERGY": true
+  },
+  "blocklist": [],
+  "min_active_set_size": 3,
+  "max_active_set_size": 7,
+  "rebuild_interval_sec": 3600,
+  "swap_delta_score": 5.0,
+  "hold_buffer": 2,
+  "correlation_enabled": true,
+  "max_correlation_threshold": 0.75,
+  "correlation_periods": 24,
+  "weights": {
+    "FOREX": {
+      "w_liquidity": 1.0,
+      "w_volatility": 1.5,
+      "w_cost": 2.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.1
+    },
+    "METALS": {
+      "w_liquidity": 1.0,
+      "w_volatility": 2.0,
+      "w_cost": 2.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.2
+    },
+    "CRYPTO": {
+      "w_liquidity": 0.5,
+      "w_volatility": 2.0,
+      "w_cost": 2.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.25
+    },
+    "INDICES": {
+      "w_liquidity": 1.5,
+      "w_volatility": 2.0,
+      "w_cost": 1.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.15
+    },
+    "COMMODITIES": {
+      "w_liquidity": 0.5,
+      "w_volatility": 2.0,
+      "w_cost": 1.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.2
+    },
+    "STOCKS_US": {
+      "w_liquidity": 1.0,
+      "w_volatility": 1.5,
+      "w_cost": 1.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.05
+    },
+    "STOCKS_BR": {
+      "w_liquidity": 2.0,
+      "w_volatility": 1.0,
+      "w_cost": 1.5,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.15
+    },
+    "STOCKS_EU": {
+      "w_liquidity": 1.5,
+      "w_volatility": 1.0,
+      "w_cost": 1.2,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.1
+    },
+    "INDICES_NY": {
+      "w_liquidity": 1.0,
+      "w_volatility": 1.0,
+      "w_cost": 1.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.1
+    },
+    "INDICES_B3": {
+      "w_liquidity": 1.0,
+      "w_volatility": 1.0,
+      "w_cost": 1.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.1
+    },
+    "INDICES_EU": {
+      "w_liquidity": 1.0,
+      "w_volatility": 1.0,
+      "w_cost": 1.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.1
+    },
+    "COMMODITIES_AGRI": {
+      "w_liquidity": 1.0,
+      "w_volatility": 1.0,
+      "w_cost": 1.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.1
+    },
+    "COMMODITIES_ENERGY": {
+      "w_liquidity": 1.0,
+      "w_volatility": 1.0,
+      "w_cost": 1.0,
+      "w_stability": 1.0,
+      "max_spread_atr_ratio": 0.1
+    }
+  },
+  "schedules": {
+    "FOREX": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "METALS": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "CRYPTO": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "INDICES_B3": {
+      "time_mode": "AUTO",
+      "time_start": "12:00",
+      "time_end": "21:00"
+    },
+    "INDICES_NY": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "INDICES_EUR": {
+      "time_mode": "AUTO",
+      "time_start": "07:00",
+      "time_end": "16:30"
+    },
+    "COMMODITIES": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "STOCKS_US": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "STOCKS_BR": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "STOCKS_EU": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "INDICES_EU": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "COMMODITIES_AGRI": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    },
+    "COMMODITIES_ENERGY": {
+      "time_mode": "AUTO",
+      "time_start": "00:00",
+      "time_end": "23:59"
+    }
+  },
+  "updated_at": "2026-02-21T22:07:03.937110"
+}
