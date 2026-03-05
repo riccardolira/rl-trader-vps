@@ -5,7 +5,6 @@ from src.infrastructure.mt5_adapter import mt5_adapter
 from src.infrastructure.system.shutdown_handler import shutdown_handler
 
 # Refactored Imports
-from src.infra.db.migrator import Migrator
 from src.services.notification.notification_service import notification_service
 from src.services.health.disk_guard import disk_guard
 from src.services.health.time_skew_guard import time_skew_guard
@@ -34,7 +33,7 @@ class Engine:
         # 2. Database Migrations & Init
         from src.infrastructure.event_store import event_store
         await event_store.init_tables()
-        await Migrator.run()
+        # await Migrator.run()  # SQLite engine is deprecated
         
         # 3. Connectivity & Infra
         if not await mt5_adapter.connect():
