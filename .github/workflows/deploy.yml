@@ -39,4 +39,4 @@ jobs:
         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         local-dir: ./frontend/dist/
         server-dir: ./public_html/
-        dangerous-clean-slate: true
+        dangerous-clean-slate: false
