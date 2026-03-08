@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Bell, Settings, BookOpen, Play, Square, Zap } from 'lucide-react';
+import { Moon, Sun, Bell, Settings, BookOpen, Play, Square, Zap, Menu } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
 import { api } from '../../services/api';
@@ -11,9 +11,10 @@ interface TopbarProps {
     setIsManualOpen: (open: boolean) => void;
     isSettingsOpen: boolean;
     setIsSettingsOpen: (open: boolean) => void;
+    onMenuToggle: () => void;
 }
 
-export const Topbar: React.FC<TopbarProps> = ({ isManualOpen, setIsManualOpen, isSettingsOpen, setIsSettingsOpen }) => {
+export const Topbar: React.FC<TopbarProps> = ({ isManualOpen, setIsManualOpen, isSettingsOpen, setIsSettingsOpen, onMenuToggle }) => {
     const { theme, setTheme } = useTheme();
     const [mt5Config, setMt5Config] = useState<{ login: string, server: string } | null>(null);
     const [accountInfo, setAccountInfo] = useState<{ balance: number, equity: number, profit: number } | null>(null);
@@ -124,8 +125,17 @@ export const Topbar: React.FC<TopbarProps> = ({ isManualOpen, setIsManualOpen, i
     };
 
     return (
-        <header className="h-16 border-b border-border/50 bg-card/40 backdrop-blur-2xl flex items-center justify-between px-6 z-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-5">
+        <header className="h-16 border-b border-border/50 bg-card/40 backdrop-blur-2xl flex items-center justify-between px-4 md:px-6 z-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-3 md:gap-5">
+                {/* Mobile Hamburger Menu */}
+                <button
+                    onClick={onMenuToggle}
+                    className="md:hidden p-2 rounded-lg hover:bg-muted/50 text-foreground transition-colors"
+                    aria-label="Toggle menu"
+                >
+                    <Menu size={24} />
+                </button>
+
                 {/* Connection Status */}
                 <div className="flex items-center gap-2.5 px-3 py-1.5 bg-muted/20 border border-border/50 rounded-lg shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
