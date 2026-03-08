@@ -29,8 +29,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
             )}
 
             <aside className={cn(
-                "fixed inset-y-0 left-0 z-50 w-64 border-r border-border/50 bg-card/95 backdrop-blur-2xl flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-transform duration-300 md:relative md:translate-x-0 h-[100dvh]",
-                isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+                "fixed inset-y-0 left-0 z-50 w-64 border-r border-border/50 bg-card/95 backdrop-blur-2xl flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-transform duration-300 md:relative md:w-64 h-[100dvh]",
+                isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+                !isMobileMenuOpen && "hidden md:flex"
             )}>
                 <div className="h-16 shrink-0 flex items-center justify-between px-6 border-b border-border/50">
                     <div className="flex items-center gap-3">
