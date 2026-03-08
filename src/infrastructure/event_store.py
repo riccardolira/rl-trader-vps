@@ -65,6 +65,23 @@ class EventStore(IPersistence):
             log.error(f"Failed to fetch closed trades: {e}")
         return trades
 
+    async def get_todays_realized_pnl(self) -> float:
+        """Calculate the sum of profit for trades closed today."""
+        try:
+            pool = await db_pool.get_pool()
+            async with pool.acquire() as db:
+                # Assuming timezone is handled or UTC is used consistently
+                query = "SELECT COALESCE(SUM(profit), 0) as total FROM trades WHERE status = 'CLOSED' AND DATE(close_time) = CURDATE()"
+                async with db.cursor(aiomysql.DictCursor) as cursor:
+                    await cursor.execute(query)
+                    row = await cursor.fetchone()
+                    if row and 'total' in row:
+                        return float(row['total'])
+        except Exception as e:
+            from src.infrastructure.logger import log
+            log.error(f"EventStore: Failed to calculate daily PnL: {e}")
+        return 0.0
+
     async def upsert_trade(self, trade: Trade):
         """Insert or Update a trade record."""
         try:

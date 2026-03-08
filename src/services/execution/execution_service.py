@@ -187,11 +187,55 @@ class ExecutionService:
                         self._session_check_ticks = 0
                         await self._monitor_session_closures(positions)
 
+                    # 6. Global Daily Circuit Breaker
+                    if not getattr(self, "circuit_breaker_tripped", False):
+                        await self._check_circuit_breaker(positions)
+                    else:
+                        # If tripped, ensure no positions are open at all
+                        if len(positions) > 0:
+                            log.critical("Circuit Breaker is ACTIVE but trades are open! Forcing closure.")
+                            for p in positions:
+                                await mt5_adapter.close_position(p.ticket, p.volume)
+
             except Exception as e:
                 log.debug(f"Telemetry Loop Error (expected if not connected): {e}")
 
             import asyncio
             await asyncio.sleep(0.25)
+
+    async def _check_circuit_breaker(self, current_positions):
+        """Checks if the daily drawdown limit has been breached."""
+        from src.infrastructure.config import settings
+        from src.infrastructure.event_store import event_store
+        from src.services.notification.notification_service import notification_service
+        
+        # Check if the feature is enabled in settings (default to -5.0%)
+        # Here we assume the value is a float representing the total account currency loss allowed, 
+        # OR a percentage. For simplicity, let's assume MAX_DAILY_LOSS is a negative absolute value 
+        # (e.g. -50.0 means at a $50 loss, we stop)
+        max_loss = getattr(settings, "MAX_DAILY_LOSS_CURRENCY", -50.0) 
+        
+        realized_pnl = await event_store.get_todays_realized_pnl()
+        floating_pnl = sum([p.profit for p in current_positions]) if current_positions else 0.0
+        
+        total_daily_pnl = realized_pnl + floating_pnl
+        
+        if total_daily_pnl <= max_loss:
+            log.critical(f"CIRCUIT BREAKER: Daily PnL ({total_daily_pnl:.2f}) surpassed maximum loss limit ({max_loss}). Halt initiated.")
+            self.circuit_breaker_tripped = True
+            
+            await notification_service.send_alert(
+                 "🚨 CIRCUIT BREAKER 🚨", 
+                 f"Perda máxima diária atingida ({total_daily_pnl:.2f}). Robô bloqueado pelo resto do dia. Posições sendo liquidadas.", 
+                 "ERROR"
+            )
+            
+            # Close everything immediately
+            from src.infrastructure.mt5_adapter import mt5_adapter
+            if current_positions:
+                for p in current_positions:
+                    log.warning(f"Circuit Breaker Liquidating: {p.symbol} [Ticket {p.ticket}]")
+                    await mt5_adapter.close_position(p.ticket, p.volume)
 
     async def _monitor_session_closures(self, positions):
         """Monitors and closes trades based on End-Of-Session smart logic."""
@@ -238,13 +282,19 @@ class ExecutionService:
 
     def get_state(self) -> dict:
         return {
-            "status": "RUNNING"
+            "status": "RUNNING",
+            "circuit_breaker_tripped": getattr(self, "circuit_breaker_tripped", False)
         }
 
     async def reconcile_state(self):
         return await self.reconciler.reconcile()
 
     async def on_order_approved(self, event):
+        # 0. Circuit Breaker Protection
+        if getattr(self, "circuit_breaker_tripped", False):
+            log.warning("ExecutionService: Order received but Circuit Breaker is ACTIVE. Order CANCELED.")
+            return
+
         order_data = event.payload
         # order = Order(**order_data) # Safe unpacking
         if isinstance(order_data, dict):
@@ -262,6 +312,30 @@ class ExecutionService:
         
         # Call MT5 Adapter
         try:
+            # 1. Spread Protection
+            import asyncio
+            tick_dict = await asyncio.to_thread(mt5_adapter.mt5_worker_client.send_command, "symbol_info_tick", args=[order.symbol])
+            if tick_dict:
+                ask_price = tick_dict.get("ask", 0.0)
+                bid_price = tick_dict.get("bid", 0.0)
+                point = await asyncio.to_thread(mt5_adapter.mt5_worker_client.send_command, "get_symbol_info", args=[order.symbol])
+                if ask_price > 0 and bid_price > 0 and point:
+                    spread_raw = ask_price - bid_price
+                    # Get point value to convert spread to points/pips
+                    point_val = point.get("point", 0.00001)
+                    spread_points = spread_raw / point_val if point_val > 0 else 0
+                    
+                    from src.infrastructure.config import settings
+                    max_spread = getattr(settings, "MAX_ALLOWED_SPREAD_POINTS", 500) # Default configurable safeguard
+                    
+                    if spread_points > max_spread:
+                        log.warning(f"ExecutionService: SPREAD PROTECTION triggered for {order.symbol}. Spread: {spread_points:.1f} pts > {max_spread}. Order Canceled.")
+                        from src.domain.events import OrderFailed
+                        await event_bus.publish(OrderFailed(order=order, reason=f"Spread Protection: {spread_points:.1f} pts"))
+                        return
+                    else:
+                        log.debug(f"ExecutionService: Spread check OK for {order.symbol} ({spread_points:.1f} pts).")
+
             ticket = await mt5_adapter.execute_order(order)
             
             if ticket and ticket > 0:

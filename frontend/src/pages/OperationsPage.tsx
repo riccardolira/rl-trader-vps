@@ -391,14 +391,28 @@ export const OperationsPage: React.FC = () => {
                     return false;
                 });
 
-                if (activeThreats.length > 0) {
+                if (engineState?.execution?.circuit_breaker_tripped) {
                     return (
                         <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg flex items-center gap-3 animate-in fade-in shadow-sm">
                             <AlertTriangle className="animate-pulse" size={24} />
                             <div className="flex flex-col">
+                                <span className="font-bold text-sm tracking-wide">🚨 CIRCUIT BREAKER TRIPADO (LOCKDOWN DIÁRIO)</span>
+                                <span className="text-xs opacity-90 mt-0.5">
+                                    O limite máximo de perda diária foi atingido! O robô cancelou novas ordens e o motor de execução está desativado até o próximo dia.
+                                </span>
+                            </div>
+                        </div>
+                    );
+                }
+
+                if (activeThreats.length > 0) {
+                    return (
+                        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 px-4 py-3 rounded-lg flex items-center gap-3 animate-in fade-in shadow-sm">
+                            <AlertTriangle className="animate-pulse" size={24} />
+                            <div className="flex flex-col">
                                 <span className="font-bold text-sm tracking-wide">SHIELD ATIVADO: BLOQUEIO DE NOTÍCIAS (LOCKDOWN)</span>
                                 <span className="text-xs opacity-90 mt-0.5">
-                                    O Motor de Operações está segurando novas entradas para ativos impactados.
+                                    O Motor de Operações está limitando entradas para ativos impactados pela alta volatilidade de notícias.
                                 </span>
                             </div>
                         </div>

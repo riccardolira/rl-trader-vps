@@ -164,6 +164,7 @@ export interface EngineState {
     };
     execution?: {
         status: string;
+        circuit_breaker_tripped?: boolean;
     };
     guardian?: {
         internet_ok: boolean;

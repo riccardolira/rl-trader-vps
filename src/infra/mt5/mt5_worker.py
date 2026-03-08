@@ -158,15 +158,15 @@ def mt5_worker_loop(command_queue, result_queue, login_config):
                     # Basic retry logic for IOC
                     while current_retry < 3:
                         res = mt5.order_send(kwargs.get("request"))
-                        if res.retcode == mt5.TRADE_RETCODE_DONE:
+                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
                             response["data"] = res._asdict()
                             response["status"] = "ok"
                             break
-                        elif res.retcode in [mt5.TRADE_RETCODE_REQUOTE, mt5.TRADE_RETCODE_PRICE_OFF]:
+                        elif res and res.retcode in [mt5.TRADE_RETCODE_REQUOTE, mt5.TRADE_RETCODE_PRICE_OFF, mt5.TRADE_RETCODE_CONNECTION]:
                              current_retry += 1
-                             time.sleep(0.1)
+                             time.sleep(0.5 * current_retry) # Incremental backoff (0.5s, 1.0s, 1.5s)
                         else:
-                            response["error"] = f"{res.comment} ({res.retcode})"
+                            response["error"] = f"{res.comment if res else 'Unknown error'} ({res.retcode if res else 'N/A'})"
                             break
                     if response["status"] != "ok" and "error" not in response:
                          response["error"] = "Max retries exceeded"
@@ -186,34 +186,35 @@ def mt5_worker_loop(command_queue, result_queue, login_config):
 
                         # Determine opposite type
                         close_type = mt5.ORDER_TYPE_SELL if pos.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
-                        # Get current price
-                        tick = mt5.symbol_info_tick(pos.symbol)
-                        price = tick.bid if close_type == mt5.ORDER_TYPE_SELL else tick.ask
-                        
-                        request = {
-                            "action": mt5.TRADE_ACTION_DEAL,
-                            "symbol": pos.symbol,
-                            "volume": close_volume,
-                            "type": close_type,
-                            "position": pos.ticket,
-                            "price": price,
-                            "deviation": 20,
-                            "magic": pos.magic,
-                            "comment": "Manual Close User",
-                            "type_time": mt5.ORDER_TIME_GTC,
-                            "type_filling": mt5.ORDER_FILLING_IOC,
-                        }
                         
                         current_retry = 0
                         while current_retry < 3:
+                            # Re-fetch tick inside retry loop for fresh price
+                            tick = mt5.symbol_info_tick(pos.symbol)
+                            price = tick.bid if close_type == mt5.ORDER_TYPE_SELL else tick.ask
+                            
+                            request = {
+                                "action": mt5.TRADE_ACTION_DEAL,
+                                "symbol": pos.symbol,
+                                "volume": close_volume,
+                                "type": close_type,
+                                "position": pos.ticket,
+                                "price": price,
+                                "deviation": 20,
+                                "magic": pos.magic,
+                                "comment": "Manual Close User",
+                                "type_time": mt5.ORDER_TIME_GTC,
+                                "type_filling": mt5.ORDER_FILLING_IOC,
+                            }
+                            
                             res = mt5.order_send(request)
                             if res and res.retcode == mt5.TRADE_RETCODE_DONE:
                                 response["data"] = res._asdict()
                                 response["status"] = "ok"
                                 break
-                            elif res and res.retcode in [mt5.TRADE_RETCODE_REQUOTE, mt5.TRADE_RETCODE_PRICE_OFF]:
+                            elif res and res.retcode in [mt5.TRADE_RETCODE_REQUOTE, mt5.TRADE_RETCODE_PRICE_OFF, mt5.TRADE_RETCODE_CONNECTION]:
                                 current_retry += 1
-                                time.sleep(0.1)
+                                time.sleep(0.5 * current_retry) # Incremental backoff
                             else:
                                 response["error"] = f"{res.comment if res else 'Unknown error'} ({res.retcode if res else 'N/A'})"
                                 break
