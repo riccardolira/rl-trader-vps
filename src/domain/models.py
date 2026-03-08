@@ -36,6 +36,8 @@ class RiskConfig(BaseModel):
     news_filter_active: bool = True
     spread_guard_active: bool = True
     max_lot_size: float = 0.01
+    global_max_spread_points: int = 500
+    global_max_daily_loss_currency: float = -50.0
     profiles: Dict[str, InstrumentProfile] = Field(default_factory=dict)
 
 class OrderSide(str, Enum):

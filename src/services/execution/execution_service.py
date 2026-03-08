@@ -208,12 +208,9 @@ class ExecutionService:
         from src.infrastructure.config import settings
         from src.infrastructure.event_store import event_store
         from src.services.notification.notification_service import notification_service
+        from src.application.services.guardian_service import guardian_service
         
-        # Check if the feature is enabled in settings (default to -5.0%)
-        # Here we assume the value is a float representing the total account currency loss allowed, 
-        # OR a percentage. For simplicity, let's assume MAX_DAILY_LOSS is a negative absolute value 
-        # (e.g. -50.0 means at a $50 loss, we stop)
-        max_loss = getattr(settings, "MAX_DAILY_LOSS_CURRENCY", -50.0) 
+        max_loss = getattr(guardian_service.config, "global_max_daily_loss_currency", -50.0) 
         
         realized_pnl = await event_store.get_todays_realized_pnl()
         floating_pnl = sum([p.profit for p in current_positions]) if current_positions else 0.0
@@ -325,8 +322,8 @@ class ExecutionService:
                     point_val = point.get("point", 0.00001)
                     spread_points = spread_raw / point_val if point_val > 0 else 0
                     
-                    from src.infrastructure.config import settings
-                    max_spread = getattr(settings, "MAX_ALLOWED_SPREAD_POINTS", 500) # Default configurable safeguard
+                    from src.application.services.guardian_service import guardian_service
+                    max_spread = getattr(guardian_service.config, "global_max_spread_points", 500)
                     
                     if spread_points > max_spread:
                         log.warning(f"ExecutionService: SPREAD PROTECTION triggered for {order.symbol}. Spread: {spread_points:.1f} pts > {max_spread}. Order Canceled.")
