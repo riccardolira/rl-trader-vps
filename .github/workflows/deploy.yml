@@ -41,3 +41,7 @@ jobs:
         server-dir: ./
         dangerous-clean-slate: false
         state-name: ''
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
