@@ -106,6 +106,81 @@ class ExecutionService:
                                 db_p.close_price = p.close_price
                                 await event_store.upsert_trade(db_p)
                                 
+                    # 4.b Dynamic Trailing Stop / Break-Even Logic
+                    try:
+                        for p in positions:
+                             if p.tp > 0 and p.sl > 0:
+                                 # Calculate total distance to TP
+                                 total_distance = abs(p.tp - p.open_price)
+                                 # Calculate current distance covered
+                                 current_distance = abs(p.close_price - p.open_price)
+                                 
+                                 if total_distance > 0:
+                                     progress_pct = current_distance / total_distance
+                                     
+                                     is_buy = p.side == "BUY" or getattr(p, "type", 1) == 0 # Handle enum or MT5 raw
+                                     
+                                     # Let's say we activate Break-Even at 50%
+                                     if progress_pct >= 0.50 and p.profit > 0:
+                                          # Partial Take Profit (TP1) at exactly 1x Risk/Reward distance
+                                          original_sl_distance = abs(p.open_price - p.sl)
+                                          if original_sl_distance > 0 and current_distance >= original_sl_distance:
+                                              # Check if we still have the full volume (approximate to avoid float issues)
+                                              # Need original volume from DB or roughly check if it's large enough.
+                                              # For safety, we only partial close if volume > 0.01 and we haven't done it yet
+                                              # A simple flag or just checking if volume hasn't been halved:
+                                              if p.ticket in db_map:
+                                                  db_origin_vol = db_map[p.ticket].volume
+                                                  if p.volume >= db_origin_vol * 0.99 and p.volume > 0.01:
+                                                      partial_vol = round(p.volume / 2.0, 2)
+                                                      # MT5 minimum volume check
+                                                      if partial_vol >= 0.01:
+                                                          log.info(f"ExecutionService: PARTIAL TAKE-PROFIT (1:1 R/R) for {p.symbol}. Closing {partial_vol} lots.")
+                                                          success = await mt5_adapter.close_position(p.ticket, volume=partial_vol)
+                                                          if success:
+                                                              from src.services.notification.notification_service import notification_service
+                                                              await notification_service.send_alert("PARCIAL EXECUTADA", f"{p.symbol} andou 1:1 do risco. Lucro parcial garantido no bolso!", "SUCCESS")
+
+                                          # Determine if SL is already at or past open_price
+                                          sl_needs_move = False
+                                          if is_buy and p.sl < p.open_price:
+                                              sl_needs_move = True
+                                          elif not is_buy and p.sl > p.open_price:
+                                              sl_needs_move = True
+                                              
+                                          if sl_needs_move:
+                                              # Move to Open Price (Break Even) + small margin to cover spread if desired
+                                              # For MVP: Move exactly to open price
+                                              new_sl = p.open_price
+                                              log.info(f"ExecutionService: BREAK-EVEN triggered for {p.symbol}. Moving SL to {new_sl}")
+                                              success = await mt5_adapter.modify_position(p.ticket, new_sl=new_sl)
+                                              if success:
+                                                  from src.services.notification.notification_service import notification_service
+                                                  await notification_service.send_alert("BREAK-EVEN ATIVADO", f"O trade {p.symbol} andou a favor. Operação protegida no zero-a-zero.", "INFO")
+                                              
+                                     # Trailing Stop: If progress >= 75%, keep trailing it 25% behind
+                                     if progress_pct >= 0.75 and p.profit > 0:
+                                         trail_distance = total_distance * 0.25
+                                         if is_buy:
+                                              new_sl = p.close_price - trail_distance
+                                              if new_sl > p.sl: # Only move UP
+                                                   log.info(f"ExecutionService: TRAILING STOP for {p.symbol}. SL advanced to {new_sl}")
+                                                   success = await mt5_adapter.modify_position(p.ticket, new_sl=new_sl)
+                                                   if success:
+                                                       from src.services.notification.notification_service import notification_service
+                                                       await notification_service.send_alert("TRAILING STOP", f"Acompanhando tendência em {p.symbol}. Novo Stop: {new_sl:.5f}", "SUCCESS")
+                                         else:
+                                              new_sl = p.close_price + trail_distance
+                                              if new_sl < p.sl: # Only move DOWN
+                                                   log.info(f"ExecutionService: TRAILING STOP for {p.symbol}. SL advanced to {new_sl}")
+                                                   success = await mt5_adapter.modify_position(p.ticket, new_sl=new_sl)
+                                                   if success:
+                                                       from src.services.notification.notification_service import notification_service
+                                                       await notification_service.send_alert("TRAILING STOP", f"Acompanhando tendência em {p.symbol}. Novo Stop: {new_sl:.5f}", "SUCCESS")
+                                                   
+                    except Exception as ts_e:
+                         log.error(f"ExecutionService: Trailing Stop Logic Error: {ts_e}")
+
                     # 5. Smart End-Of-Session Closures
                     self._session_check_ticks += 1
                     if self._session_check_ticks >= 240: # Every ~60 seconds

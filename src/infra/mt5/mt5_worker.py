@@ -179,6 +179,11 @@ def mt5_worker_loop(command_queue, result_queue, login_config):
                         response["error"] = f"Position {ticket} not found or already closed."
                     else:
                         pos = positions[0]
+                        # Support partial close
+                        requested_volume = args[1] if len(args) > 1 and args[1] is not None else pos.volume
+                        # Ensure we don't try to close more than we have
+                        close_volume = min(float(requested_volume), pos.volume)
+
                         # Determine opposite type
                         close_type = mt5.ORDER_TYPE_SELL if pos.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
                         # Get current price
@@ -188,7 +193,7 @@ def mt5_worker_loop(command_queue, result_queue, login_config):
                         request = {
                             "action": mt5.TRADE_ACTION_DEAL,
                             "symbol": pos.symbol,
-                            "volume": pos.volume,
+                            "volume": close_volume,
                             "type": close_type,
                             "position": pos.ticket,
                             "price": price,
@@ -214,6 +219,33 @@ def mt5_worker_loop(command_queue, result_queue, login_config):
                                 break
                         if response["status"] != "ok" and "error" not in response:
                              response["error"] = "Max retries exceeded for close."
+
+                elif method == "modify_position":
+                    ticket = args[0]
+                    new_sl = args[1]
+                    new_tp = args[2]
+
+                    # Get position details to know symbol, type, price, etc.
+                    positions = mt5.positions_get(ticket=ticket)
+                    if positions is None or len(positions) == 0:
+                        response["error"] = f"Position {ticket} not found for modification."
+                    else:
+                        pos = positions[0]
+                        request = {
+                            "action": mt5.TRADE_ACTION_SLTP,
+                            "position": pos.ticket,
+                            "symbol": pos.symbol,
+                            "sl": float(new_sl) if new_sl is not None else pos.sl,
+                            "tp": float(new_tp) if new_tp is not None else pos.tp,
+                        }
+                        
+                        # Try to send modification
+                        res = mt5.order_send(request)
+                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                            response["data"] = res._asdict()
+                            response["status"] = "ok"
+                        else:
+                            response["error"] = f"{res.comment if res else 'Unknown error'} ({res.retcode if res else 'N/A'})"
 
                 elif method == "symbol_info_tick":
                     symbol = args[0]

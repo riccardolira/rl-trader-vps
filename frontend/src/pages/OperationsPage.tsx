@@ -208,8 +208,17 @@ const PositionCard = React.memo(({ pos, handleClosePosition }: { pos: any, handl
                     ) : null}
 
                     {pos.sl && pos.sl > 0 ? (
-                        <div className="text-rose-500 bg-rose-500/5 px-3 py-1.5 rounded-lg border border-rose-500/20 flex flex-col">
-                            <span className="font-bold text-[10px] uppercase mb-0.5">Loss</span>
+                        <div className="text-rose-500 bg-rose-500/5 px-3 py-1.5 rounded-lg border border-rose-500/20 flex flex-col relative group/sl">
+                            <span className="font-bold text-[10px] uppercase mb-0.5 flex items-center gap-1">
+                                Loss
+                                {(() => {
+                                    // Visual cue for Break Even or Trailing Stop if SL moved beyond open price
+                                    const isBuy = pos.side === 'BUY';
+                                    const improved = isBuy ? Number(pos.sl) >= Number(pos.open_price || pos.price_open) : Number(pos.sl) <= Number(pos.open_price || pos.price_open);
+                                    if (improved) return <ShieldCheck size={10} className="text-emerald-500 animate-pulse" />;
+                                    return <TrendingUp size={10} className="opacity-0 group-hover/sl:opacity-100 group-hover/sl:animate-bounce transition-all duration-300" />;
+                                })()}
+                            </span>
                             <span className="text-[11px] font-semibold">{(() => {
                                 const diff = Math.abs(Number(pos.open_price || pos.price_open) - Number(pos.sl));
                                 return formatPnlEstimate(diff, pos.symbol, Number(pos.volume) || 0.01, pos.asset_class);

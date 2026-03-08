@@ -139,12 +139,25 @@ class MT5Adapter(IExecutionProvider):
         return None
 
     async def close_position(self, ticket: int, volume: Optional[float] = None) -> bool:
-        res = await asyncio.to_thread(mt5_worker_client.send_command, "close_position", args=[ticket])
+        res = await asyncio.to_thread(mt5_worker_client.send_command, "close_position", args=[ticket, volume])
         if res:
-            log.success(f"Position {ticket} closed successfully.")
+            if volume:
+                 log.success(f"Position {ticket} partially closed ({volume} lots).")
+            else:
+                 log.success(f"Position {ticket} fully closed.")
             return True
         else:
             log.error(f"Failed to close position {ticket}.")
+            return False
+
+    async def modify_position(self, ticket: int, new_sl: Optional[float] = None, new_tp: Optional[float] = None) -> bool:
+        """Modifies the Stop Loss or Take Profit of an existing position."""
+        res = await asyncio.to_thread(mt5_worker_client.send_command, "modify_position", args=[ticket, new_sl, new_tp])
+        if res:
+            log.success(f"Position {ticket} modified successfully (SL={new_sl}, TP={new_tp}).")
+            return True
+        else:
+            log.error(f"Failed to modify position {ticket}.")
             return False
 
     async def get_symbols(self) -> List[str]:
