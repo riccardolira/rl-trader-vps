@@ -28,7 +28,7 @@ class MT5Adapter(IExecutionProvider):
         mt5_worker_client.stop()
 
     async def get_account_info(self) -> Optional[AccountInfo]:
-        info = mt5_worker_client.send_command("get_account")
+        info = await asyncio.to_thread(mt5_worker_client.send_command, "get_account")
         if not info:
              return None
              
@@ -36,7 +36,7 @@ class MT5Adapter(IExecutionProvider):
         return AccountInfo(**info)
 
     async def get_positions(self) -> Optional[List[Trade]]:
-        raw_positions = mt5_worker_client.send_command("get_positions")
+        raw_positions = await asyncio.to_thread(mt5_worker_client.send_command, "get_positions")
         if raw_positions is None:
             return None # Do not return [], to prevent UI from clearing trades on MT5 worker timeout
 
@@ -77,7 +77,7 @@ class MT5Adapter(IExecutionProvider):
         # We need to construct the 'request' dict for order_send
         
         # We need tick first (to get price)
-        tick = mt5_worker_client.send_command("symbol_info_tick", args=[order.symbol])
+        tick = await asyncio.to_thread(mt5_worker_client.send_command, "symbol_info_tick", args=[order.symbol])
         if not tick:
             raise RuntimeError(f"No tick for {order.symbol}")
             
@@ -115,7 +115,7 @@ class MT5Adapter(IExecutionProvider):
             "type_filling": ORDER_FILLING_IOC,
         }
         try:
-            res = mt5_worker_client.send_command("order_send", kwargs={"request": request}, timeout=15.0, raise_on_error=True)
+            res = await asyncio.to_thread(mt5_worker_client.send_command, "order_send", kwargs={"request": request}, timeout=15.0, raise_on_error=True)
             return res.get("order", 0)
         except RuntimeError as e:
             raise RuntimeError(f"Broker rejected: {str(e)}")
@@ -133,13 +133,13 @@ class MT5Adapter(IExecutionProvider):
             raise RuntimeError("Order Send Timeout (Not found in active positions)")
 
     async def get_server_time(self) -> Optional[datetime]:
-        ts = mt5_worker_client.send_command("get_server_time", args=[settings.MT5_TIME_SYNC_SYMBOL])
+        ts = await asyncio.to_thread(mt5_worker_client.send_command, "get_server_time", args=[settings.MT5_TIME_SYNC_SYMBOL])
         if ts:
             return datetime.fromtimestamp(ts)
         return None
 
     async def close_position(self, ticket: int, volume: Optional[float] = None) -> bool:
-        res = mt5_worker_client.send_command("close_position", args=[ticket])
+        res = await asyncio.to_thread(mt5_worker_client.send_command, "close_position", args=[ticket])
         if res:
             log.success(f"Position {ticket} closed successfully.")
             return True
@@ -148,18 +148,18 @@ class MT5Adapter(IExecutionProvider):
             return False
 
     async def get_symbols(self) -> List[str]:
-        symbols = mt5_worker_client.send_command("symbols_get")
+        symbols = await asyncio.to_thread(mt5_worker_client.send_command, "symbols_get")
         if symbols:
             return symbols
         return []
 
     async def get_history_deals(self, from_date: datetime, to_date: datetime) -> List[dict]:
-        res = mt5_worker_client.send_command("get_history_deals", args=[from_date, to_date], timeout=15.0)
+        res = await asyncio.to_thread(mt5_worker_client.send_command, "get_history_deals", args=[from_date, to_date], timeout=15.0)
         return res if res else []
 
     async def get_symbols_with_path(self) -> dict[str, str]:
         """Returns a dict mapping symbol names to their MT5 path."""
-        symbols = mt5_worker_client.send_command("symbols_get_with_path")
+        symbols = await asyncio.to_thread(mt5_worker_client.send_command, "symbols_get_with_path")
         if symbols:
             return symbols
         return {}

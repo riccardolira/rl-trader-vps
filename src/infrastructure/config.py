@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     MT5_SERVER: str = ""
     MT5_PATH: Optional[str] = None # Path to terminal64.exe
     MT5_TIMEOUT_SEC: int = 30
-    MT5_TIME_SYNC_SYMBOL: str = "EURUSD-T" # Symbol to check for server time/connectivity
+    MT5_TIME_SYNC_SYMBOL: str = "EURUSD" # Symbol to check for server time/connectivity
     
     # --- Resilience ---
     LOG_LEVEL: str = "INFO"

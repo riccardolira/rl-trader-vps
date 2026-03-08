@@ -32,6 +32,7 @@ interface TradeHistoryProps {
     onDeleteSuccess?: () => void;
     periodPreset?: 'today' | '24h' | '7d' | '30d' | 'all';
     onTradeClick?: (trade: Trade) => void;
+    hideFilters?: boolean;
 }
 
 export const TradeHistory: React.FC<TradeHistoryProps> = ({ dataOverride, onDeleteSuccess, periodPreset = 'all', onTradeClick }) => {
