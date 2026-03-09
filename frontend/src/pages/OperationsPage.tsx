@@ -78,6 +78,29 @@ function formatPnlEstimate(diff: number, symbol: string, volume: number, assetCl
     return `${displayStr} (~$${estMoney})`;
 }
 
+function getAssetClassBadge(symbol: string, presetClass?: string) {
+    let aCls = (presetClass || '').toUpperCase();
+    const sym = (symbol || '').toUpperCase();
+
+    if (!aCls || aCls === 'UNKNOWN') {
+        if (sym.includes('BTC') || sym.includes('ETH')) aCls = 'CRYPTO';
+        else if (sym.includes('XAU') || sym.includes('GOLD') || sym.includes('XAG') || sym.includes('SILVER')) aCls = 'METALS';
+        else if (sym.includes('US100') || sym.includes('NAS') || sym.includes('US30') || sym.includes('USA30') || sym.includes('GER40') || sym.includes('UK100') || sym.includes('SPX')) aCls = 'INDICES';
+        else if (sym.includes('XBR') || sym.includes('WTI') || sym.includes('OIL') || sym.includes('BRENT')) aCls = 'COMMODITIES';
+        else if (sym.includes('#')) aCls = 'STOCKS';
+        else aCls = 'FOREX';
+    }
+
+    let colors = "bg-slate-500/10 text-slate-500 border-slate-500/20";
+    if (aCls === 'FOREX') colors = "bg-blue-500/10 text-blue-500 border-blue-500/20";
+    else if (aCls === 'INDICES') colors = "bg-purple-500/10 text-purple-500 border-purple-500/20";
+    else if (aCls === 'CRYPTO') colors = "bg-orange-500/10 text-orange-500 border-orange-500/20";
+    else if (aCls === 'METALS') colors = "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
+    else if (aCls === 'COMMODITIES') colors = "bg-amber-700/10 text-amber-600 border-amber-700/20";
+
+    return <span className={cn("text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border tracking-widest", colors)}>{aCls}</span>;
+}
+
 const SignalCard = React.memo(({ sig }: { sig: any }) => (
     <div className="bg-card border border-border/50 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/30 flex items-center justify-between group">
         <div className="flex items-center gap-4">
@@ -96,14 +119,11 @@ const SignalCard = React.memo(({ sig }: { sig: any }) => (
                     )}>
                         {sig.direction}
                     </span>
-                    {sig.asset_class && (
-                        <span className="text-[9px] font-bold uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 tracking-widest ml-1">
-                            {sig.asset_class}
-                        </span>
-                    )}
+                    {getAssetClassBadge(sig.symbol, sig.asset_class)}
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
                     Estratégia: <span className="font-bold text-foreground/80">{sig.strategy_name}</span>
+                    {sig.score && <span className="ml-2 bg-muted/50 px-1.5 py-0.5 rounded border border-border/50">Score {sig.score.toFixed(1)}</span>}
                 </div>
             </div>
         </div>
@@ -120,7 +140,10 @@ const DraftCard = React.memo(({ draft }: { draft: any }) => (
                 <ShieldCheck size={18} />
             </div>
             <div className="flex flex-col gap-0.5">
-                <span className="font-bold text-lg tracking-tight text-foreground/90">{draft.symbol}</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-bold text-lg tracking-tight text-foreground/90">{draft.symbol}</span>
+                    {getAssetClassBadge(draft.symbol, draft.asset_class)}
+                </div>
                 <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Risk Engine Draft</span>
             </div>
         </div>
@@ -150,11 +173,7 @@ const PositionCard = React.memo(({ pos, handleClosePosition }: { pos: any, handl
                         <span className="text-[10px] font-mono bg-muted/80 px-2 py-0.5 rounded text-muted-foreground border border-border/50 font-bold">
                             {pos.volume} Lots
                         </span>
-                        {pos.asset_class && (
-                            <span className="text-[10px] font-bold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/20 tracking-widest">
-                                {pos.asset_class}
-                            </span>
-                        )}
+                        {getAssetClassBadge(pos.symbol, pos.asset_class)}
                         {pos.is_market_closed ? (
                             <span className="text-[10px] font-bold uppercase bg-neutral-500/10 text-neutral-500 px-2 py-0.5 rounded border border-neutral-500/20 tracking-widest">
                                 FECHADO

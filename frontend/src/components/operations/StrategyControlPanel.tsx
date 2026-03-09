@@ -14,6 +14,12 @@ export const StrategyControlPanel: React.FC = () => {
     const [strategies, setStrategies] = useState<StrategyConfigItem[]>([]);
     const [riskConfig, setRiskConfig] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
 
     const fetchConfig = async () => {
         try {
@@ -44,8 +50,10 @@ export const StrategyControlPanel: React.FC = () => {
         setStrategies(prev => prev.map(s => s.name === name ? { ...s, ...updates } : s));
         try {
             await api.put(`/api/engine/strategies/config/${name}`, updates);
+            showToast(`[SYS] ${name} atualizada.`, 'success');
         } catch (e) {
             console.error("Failed to update strategy", e);
+            showToast(`[ERR] Falha de comunicação (${name})`, 'error');
             // Revert on error
             fetchConfig();
         }
@@ -57,8 +65,10 @@ export const StrategyControlPanel: React.FC = () => {
         setRiskConfig(newConfig);
         try {
             await api.post(`/api/risk/config`, updates);
+            showToast(`[SYS] Parâmetros de risco salvos no cofre.`, 'success');
         } catch (e) {
             console.error("Failed to update risk config", e);
+            showToast(`[ERR] Rejeição do servidor (Guardian)`, 'error');
             fetchConfig();
         }
     };
@@ -80,7 +90,18 @@ export const StrategyControlPanel: React.FC = () => {
     if (loading) return <div className="p-4 text-muted-foreground animate-pulse text-sm font-mono">Carregando painel do motor...</div>;
 
     return (
-        <div className="bg-card border border-border/50 rounded-xl p-4 shadow-sm">
+        <div className="bg-card border border-border/50 rounded-xl p-4 shadow-sm relative">
+            {/* Toast Notification Layer */}
+            {toast && (
+                <div className={cn(
+                    "absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2",
+                    toast.type === 'success' ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50" : "bg-rose-500/20 text-rose-500 border border-rose-500/50"
+                )}>
+                    {toast.type === 'success' ? <ShieldCheck size={14} /> : <Zap size={14} />}
+                    {toast.message}
+                </div>
+            )}
+
             <div className="flex items-center justify-between mb-4 border-b border-border/50 pb-3">
                 <div className="flex items-center gap-2">
                     <SlidersHorizontal size={18} className="text-primary" />

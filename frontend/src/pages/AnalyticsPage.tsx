@@ -759,15 +759,30 @@ export const AnalyticsPage: React.FC = () => {
                                     Contexto Matemático (Entrada)
                                 </h4>
 
-                                {selectedTrade.market_context ? (
-                                    <div className="bg-[#0D0D0D] border border-border/50 rounded-xl p-4 flex-1 flex flex-col font-mono text-xs overflow-hidden">
-                                        <p className="text-muted-foreground/70 mb-3 text-[11px] pb-2 border-b border-border/30 shrink-0">
-                                            // Snapshot capturado pelo Arbiter
+                                {selectedTrade.market_context && Object.keys(selectedTrade.market_context).length > 0 ? (
+                                    <div className="bg-card border border-border/50 rounded-xl p-4 flex-1 flex flex-col font-mono overflow-hidden shadow-inner">
+                                        <p className="text-muted-foreground/70 mb-4 text-[11px] pb-2 border-b border-border/30 shrink-0 flex items-center justify-between uppercase tracking-widest font-bold">
+                                            <span>// Snapshot Arbiter</span>
+                                            <span className="text-emerald-500/70">Sys_OK</span>
                                         </p>
                                         <div className="overflow-y-auto flex-1 custom-scrollbar pr-2 leading-relaxed">
-                                            <pre className="text-emerald-400">
-                                                {JSON.stringify(selectedTrade.market_context, null, 2)}
-                                            </pre>
+                                            <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+                                                {Object.entries(selectedTrade.market_context).map(([key, val]) => (
+                                                    <div key={key} className="flex flex-col bg-muted/30 p-2.5 rounded-lg border border-border/40 hover:bg-muted/50 transition-colors">
+                                                        <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest truncate mb-1">
+                                                            {key.replace(/_/g, ' ')}
+                                                        </span>
+                                                        <span className={cn(
+                                                            "text-xs font-bold truncate",
+                                                            typeof val === 'number' ? 'text-blue-500 dark:text-blue-400' :
+                                                                typeof val === 'boolean' ? (val ? 'text-emerald-500' : 'text-rose-500') :
+                                                                    'text-amber-600 dark:text-amber-400'
+                                                        )}>
+                                                            {typeof val === 'number' ? (Number.isInteger(val) ? val : val.toFixed(4)) : String(val).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
