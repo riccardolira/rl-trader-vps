@@ -7,7 +7,7 @@ interface WatchdogConfig {
 
 const DEFAULT_CONFIG: WatchdogConfig = {
     uiStuckTimeoutMs: 30000,
-    snapshotStaleTimeoutMs: 60000,
+    snapshotStaleTimeoutMs: 1200000, // 20 minutes (backend rebuilds every 15m)
 };
 
 class UxWatchdog {
