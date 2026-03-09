@@ -51,7 +51,7 @@ class NtfyProvider(INotificationProvider):
                     return False
         except Exception as e:
             # Must not crash the bot
-            log.error(f"Ntfy connection error: {e}")
+            log.warning(f"Ntfy connection error: {e}")
             return False
 
 # Export instance

@@ -133,7 +133,10 @@ class MT5WorkerClient:
                     return response["data"]
                 else:
                     err_msg = response.get('error', 'Unknown Error')
-                    log.error(f"MT5Worker: Command {method} failed: {err_msg}")
+                    if "Market likely closed" in err_msg:
+                        log.debug(f"MT5Worker: Command {method} failed: {err_msg}")
+                    else:
+                        log.error(f"MT5Worker: Command {method} failed: {err_msg}")
                     if raise_on_error:
                          raise RuntimeError(err_msg)
                     return None
