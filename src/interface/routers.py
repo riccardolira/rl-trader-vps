@@ -69,10 +69,16 @@ async def get_analytics_dashboard(start_dt: Optional[datetime] = None, end_dt: O
     return await stats_service.get_dashboard_data(start_dt=start_dt, end_dt=end_dt)
 
 @router.get("/api/analytics/insights")
-async def get_analytics_insights():
+async def get_analytics_insights(start_dt: Optional[datetime] = None, end_dt: Optional[datetime] = None):
     """Returns AI generated insights about the trading history."""
     from src.services.stats.recommendation_engine import recommendation_engine
-    return await recommendation_engine.generate_insights()
+    from src.services.stats.stats_service import stats_service
+    
+    # Fetch current metrics to feed the engine
+    dashboard_data = await stats_service.get_dashboard_data(start_dt=start_dt, end_dt=end_dt)
+    metrics = dashboard_data.get("metrics", {})
+    
+    return await recommendation_engine.generate_insights(metrics)
 
 @router.get("/api/analytics/transparency")
 async def get_analytics_transparency():
