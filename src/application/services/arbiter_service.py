@@ -143,7 +143,7 @@ class ArbiterService:
             if account_info and account_info.equity > 0:
                 equity = account_info.equity
             else:
-                equity = 10000.0
+                equity = 1000.0 # V4 Demo Fallback
             
             # Fetch specific risk_pct from Guardian's profile for this asset class
             asset_class_str = get_asset_class(signal.symbol)

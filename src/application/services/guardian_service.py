@@ -168,8 +168,8 @@ class GuardianService:
         if is_approved:
             # Fetch real account info for snapshot
             account_info = await mt5_adapter.get_account_info()
-            equity = account_info.equity if account_info else 10000.0
-            balance = account_info.balance if account_info else 10000.0
+            equity = account_info.equity if account_info else 1000.0
+            balance = account_info.balance if account_info else 1000.0
             
             from src.domain.models import get_magic_for_strategy
             
