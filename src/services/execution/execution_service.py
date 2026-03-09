@@ -323,7 +323,15 @@ class ExecutionService:
                     spread_points = spread_raw / point_val if point_val > 0 else 0
                     
                     from src.application.services.guardian_service import guardian_service
-                    max_spread = getattr(guardian_service.config, "global_max_spread_points", 500)
+                    from src.domain.models import get_asset_class
+                    
+                    asset_class = get_asset_class(order.symbol)
+                    profile = guardian_service.config.profiles.get(asset_class.value)
+                    
+                    if profile and profile.spread_max_points > 0:
+                        max_spread = profile.spread_max_points
+                    else:
+                        max_spread = getattr(guardian_service.config, "global_max_spread_points", 500)
                     
                     if spread_points > max_spread:
                         log.warning(f"ExecutionService: SPREAD PROTECTION triggered for {order.symbol}. Spread: {spread_points:.1f} pts > {max_spread}. Order Canceled.")

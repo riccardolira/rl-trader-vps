@@ -120,7 +120,10 @@ class StrategyEngine:
                          })
                      else:
                          # Aligned
-                         candidate = candidate.copy(update={"score_mtf": 10.0}) # Small Boost
+                         candidate = candidate.copy(update={
+                             "final_score": candidate.final_score + 10.0,
+                             "score_mtf": 10.0
+                         })
                 
                 # --- Step 5: Strict Regime Locks (REMOVED: Delegated to individual strategy scores) ---
                 
