@@ -94,7 +94,7 @@ export const StrategyControlPanel: React.FC = () => {
             {/* Toast Notification Layer */}
             {toast && (
                 <div className={cn(
-                    "absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2",
+                    "fixed top-24 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-lg text-xs font-mono font-bold shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2",
                     toast.type === 'success' ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50" : "bg-rose-500/20 text-rose-500 border border-rose-500/50"
                 )}>
                     {toast.type === 'success' ? <ShieldCheck size={14} /> : <Zap size={14} />}
