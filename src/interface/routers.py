@@ -78,7 +78,7 @@ async def get_analytics_insights(start_dt: Optional[datetime] = None, end_dt: Op
     dashboard_data = await stats_service.get_dashboard_data(start_dt=start_dt, end_dt=end_dt)
     metrics = dashboard_data.get("metrics", {})
     
-    return await recommendation_engine.generate_insights(metrics)
+    return recommendation_engine.generate_insights(metrics)
 
 @router.get("/api/analytics/transparency")
 async def get_analytics_transparency():
