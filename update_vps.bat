@@ -5,7 +5,8 @@ echo ==================================================
 echo.
 
 echo [1/3] Fetching latest updates from GitHub...
-git pull origin main
+git fetch origin
+git reset --hard origin/main
 
 if %errorlevel% neq 0 (
     echo.

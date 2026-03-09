@@ -1,5 +1,5 @@
 {
-  "scanner_enabled": false,
+  "scanner_enabled": true,
   "selection_mode": "AUTO",
   "manual_basket": [],
   "classes_enabled": {
