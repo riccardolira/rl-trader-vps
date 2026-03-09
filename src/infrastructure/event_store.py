@@ -13,7 +13,7 @@ class EventStore(IPersistence):
         """Persist an event to the audit log."""
         try:
             sql = """
-                INSERT INTO audit_events (id, timestamp, type, component, severity, correlation_id, payload_json)
+                INSERT IGNORE INTO audit_events (id, timestamp, type, component, severity, correlation_id, payload_json)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """
             
