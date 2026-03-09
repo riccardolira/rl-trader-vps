@@ -96,6 +96,11 @@ const SignalCard = React.memo(({ sig }: { sig: any }) => (
                     )}>
                         {sig.direction}
                     </span>
+                    {sig.asset_class && (
+                        <span className="text-[9px] font-bold uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 tracking-widest ml-1">
+                            {sig.asset_class}
+                        </span>
+                    )}
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
                     Estratégia: <span className="font-bold text-foreground/80">{sig.strategy_name}</span>
