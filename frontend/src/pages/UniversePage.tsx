@@ -85,17 +85,19 @@ export const UniversePage = () => {
     });
 
     const fetchData = useCallback(async () => {
-        // Fetch extended diagnostics instead of just snapshot for the new diagnostic panel
-        const s = await api.get<DiagnosticsData>('/api/universe/diagnostics').catch(() => null);
+        const [s, r, c] = await Promise.all([
+            api.get<DiagnosticsData>('/api/universe/diagnostics').catch(() => null),
+            api.get<RankingRow[]>('/api/universe/ranking').catch(() => null),
+            api.get<UniverseConfig>('/api/universe/config').catch(() => null)
+        ]);
+
         if (s) {
             setSnapshot(s);
             uxWatchdog.notifySnapshotReceived(s.cycle_id);
         }
 
-        const r = await api.get<RankingRow[]>('/api/universe/ranking');
         if (r) setRanking(r);
 
-        const c = await api.get<UniverseConfig>('/api/universe/config');
         if (c) {
             setConfig(c);
             if (c.manual_basket) {

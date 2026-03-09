@@ -282,12 +282,16 @@ export const OperationsPage: React.FC = () => {
 
     useEffect(() => {
         const fetchState = async () => {
-            const res = await api.get<EngineState>('/api/state').catch(() => null);
+            const [res, newsRes, recentRes] = await Promise.all([
+                api.get<EngineState>('/api/state').catch(() => null),
+                api.get<{ status: string, threats: any[] }>('/api/universe/news-threats').catch(() => null),
+                api.get<{ signals: any[], drafts: any[] }>('/api/events/recent').catch(() => null)
+            ]);
+
             if (res) setEngineState(res);
 
-            const newsRes = await api.get<{ status: string, threats: any[] }>('/api/universe/news-threats').catch(() => null);
             if (newsRes && newsRes.threats) setThreats(newsRes.threats);
-            const recentRes = await api.get<{ signals: any[], drafts: any[] }>('/api/events/recent').catch(() => null);
+
             if (recentRes) {
                 if (recentRes.signals) setSignals(recentRes.signals);
                 if (recentRes.drafts) setDrafts(recentRes.drafts);
