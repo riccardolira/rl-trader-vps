@@ -47,11 +47,11 @@ function AppContent() {
         isSettingsOpen={isSettingsOpen}
         setIsSettingsOpen={setIsSettingsOpen}
       >
-        {activeTab === 'universe' && <UniversePage />}
-        {activeTab === 'operations' && <OperationsPage />}
-        {activeTab === 'analytics' && <AnalyticsPage />}
-        {activeTab === 'logs' && <LogsPage />}
-        {activeTab === 'risk' && <RiskPage />}
+        <div className={activeTab === 'universe' ? 'block h-full' : 'hidden'}><UniversePage /></div>
+        <div className={activeTab === 'operations' ? 'block h-full' : 'hidden'}><OperationsPage /></div>
+        <div className={activeTab === 'analytics' ? 'block h-full' : 'hidden'}><AnalyticsPage /></div>
+        <div className={activeTab === 'logs' ? 'block h-full' : 'hidden'}><LogsPage /></div>
+        <div className={activeTab === 'risk' ? 'block h-full' : 'hidden'}><RiskPage /></div>
       </Layout>
       <ManualOverlay isOpen={isManualOpen} onClose={() => setIsManualOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
