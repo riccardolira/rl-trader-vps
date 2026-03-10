@@ -159,6 +159,39 @@ export const RiskControlPanel: React.FC = () => {
                     </div>
                 </div>
 
+                {/* 4. Global Safety Locks (Guardian) */}
+                <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 shadow-sm col-span-1 md:col-span-2 backdrop-blur-md">
+                    <div className="flex items-center gap-3 mb-6 text-destructive">
+                        <div className="p-2.5 bg-destructive/10 rounded-xl">
+                            <Shield className="h-5 w-5" />
+                        </div>
+                        <h3 className="font-semibold text-lg tracking-tight">Travas Globais de Segurança (Guardian)</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="group">
+                            <label className="text-[11px] font-bold text-muted-foreground/80 mb-2 block tracking-wider uppercase">Proteção de Spread Máximo (Pontos)</label>
+                            <input
+                                type="number"
+                                value={config.global_max_spread_points || 0}
+                                onChange={(e) => setConfig({ ...config, global_max_spread_points: parseInt(e.target.value) || 0 })}
+                                className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 font-mono text-lg focus:outline-none focus:border-primary/50 transition-colors"
+                            />
+                            <p className="text-[10px] text-muted-foreground/50 mt-2">Impede a execução se a distância entre Bid e Ask estiver predatória.</p>
+                        </div>
+                        <div className="group">
+                            <label className="text-[11px] font-bold text-destructive/80 mb-2 block tracking-wider uppercase">Circuit Breaker Diário (Currency)</label>
+                            <input
+                                type="number"
+                                step="10"
+                                value={config.global_max_daily_loss_currency || 0}
+                                onChange={(e) => setConfig({ ...config, global_max_daily_loss_currency: parseFloat(e.target.value) || 0 })}
+                                className="w-full bg-background border border-destructive/30 rounded-xl px-4 py-3 font-mono text-lg text-rose-500 font-bold focus:outline-none focus:border-destructive/50 transition-colors"
+                            />
+                            <p className="text-[10px] text-muted-foreground/50 mt-2">Desativa o robô e zera posições se a perda atingir este valor.</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* 3.5. Asset Class Profiles */}
                 {config.profiles && Object.keys(config.profiles).length > 0 && (
                     <div className="rounded-2xl border border-border/50 bg-card/80 p-6 shadow-sm col-span-1 md:col-span-2 backdrop-blur-md">

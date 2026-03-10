@@ -12,7 +12,6 @@ export interface StrategyConfigItem {
 
 export const StrategyControlPanel: React.FC = () => {
     const [strategies, setStrategies] = useState<StrategyConfigItem[]>([]);
-    const [riskConfig, setRiskConfig] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
 
@@ -26,10 +25,6 @@ export const StrategyControlPanel: React.FC = () => {
             const res = await api.get<StrategyConfigItem[]>('/api/engine/strategies/config');
             if (res) {
                 setStrategies(res);
-            }
-            const riskRes = await api.get<any>('/api/risk/config');
-            if (riskRes) {
-                setRiskConfig(riskRes);
             }
         } catch (e) {
             console.error("Failed to load strategy config", e);
@@ -59,19 +54,7 @@ export const StrategyControlPanel: React.FC = () => {
         }
     };
 
-    const updateRiskConfig = async (updates: any) => {
-        if (!riskConfig) return;
-        const newConfig = { ...riskConfig, ...updates };
-        setRiskConfig(newConfig);
-        try {
-            await api.post(`/api/risk/config`, updates);
-            showToast(`[SYS] Parâmetros de risco salvos no cofre.`, 'success');
-        } catch (e) {
-            console.error("Failed to update risk config", e);
-            showToast(`[ERR] Rejeição do servidor (Guardian)`, 'error');
-            fetchConfig();
-        }
-    };
+
 
     const getIcon = (name: string) => {
         if (name.includes('Trend')) return <TrendingUp size={18} />;
@@ -210,57 +193,7 @@ export const StrategyControlPanel: React.FC = () => {
                 ))}
             </div>
 
-            {/* Global Risk Configuration */}
-            {riskConfig && (
-                <div className="mt-8 border-t border-border/50 pt-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <ShieldCheck size={18} className="text-destructive" />
-                        <h3 className="font-bold text-lg tracking-tight">Travas Globais de Segurança (Guardian)</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                        <div className="bg-muted/10 border border-border/30 rounded-xl p-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-bold tracking-tight text-foreground/90 text-sm">Proteção de Spread Máximo</h4>
-                            </div>
-                            <p className="text-xs text-muted-foreground mb-4">
-                                Impede a execução se a distância entre Bid e Ask estiver predatória.
-                            </p>
-                            <div className="flex items-center justify-between">
-                                <input
-                                    type="number"
-                                    value={riskConfig.global_max_spread_points}
-                                    onChange={(e) => updateRiskConfig({ global_max_spread_points: parseInt(e.target.value) || 0 })}
-                                    className="w-24 bg-background border border-border/50 rounded px-2 py-1 text-sm font-mono text-center"
-                                />
-                                <span className="text-xs font-bold text-muted-foreground uppercase">Pontos</span>
-                            </div>
-                        </div>
-
-                        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-bold tracking-tight text-destructive text-sm flex items-center gap-2">
-                                    <TrendingUp size={14} className="rotate-180" /> Circuit Breaker Diário
-                                </h4>
-                            </div>
-                            <p className="text-xs text-muted-foreground mb-4">
-                                Desativa o robô e zera as posições abertas se a perda somar este valor financeiro no dia.
-                            </p>
-                            <div className="flex items-center justify-between">
-                                <input
-                                    type="number"
-                                    step="10"
-                                    value={riskConfig.global_max_daily_loss_currency}
-                                    onChange={(e) => updateRiskConfig({ global_max_daily_loss_currency: parseFloat(e.target.value) || 0 })}
-                                    className="w-24 bg-background border border-border/50 rounded px-2 py-1 text-sm font-mono text-center text-rose-500 font-bold"
-                                />
-                                <span className="text-xs font-bold text-muted-foreground uppercase">Moeda Base (Ex: USD)</span>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
