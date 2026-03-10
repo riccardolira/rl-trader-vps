@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Settings, Square, Zap, Menu } from 'lucide-react';
+import { Moon, Sun, Settings, Square, Zap, Menu, Play } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { cn } from '../../lib/utils';
+import { api } from '../../services/api';
+import type { UniverseConfig, EngineState } from '../../services/api';
 
 interface TopbarProps {
     isManualOpen: boolean;
@@ -13,6 +16,12 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpen, onMenuToggle }) => {
     const { theme, setTheme } = useTheme();
     const [mt5Config, setMt5Config] = useState<{ login: string, server: string } | null>(null);
+
+    // Global controls state
+    const [config, setConfig] = useState<UniverseConfig | null>(null);
+    const [engineState, setEngineState] = useState<EngineState | null>(null);
+    const [isTogglingScanner, setIsTogglingScanner] = useState(false);
+    const [isTogglingEngine, setIsTogglingEngine] = useState(false);
 
     useEffect(() => {
         // Fetch config initially and when settings modal closes (to catch updates)
@@ -30,6 +39,43 @@ export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpe
                 .catch(err => console.error("Failed to fetch MT5 config for topbar", err));
         }
     }, [isSettingsOpen]);
+
+    useEffect(() => {
+        const fetchGlobalStatus = async () => {
+            const configRes = await api.get<UniverseConfig>('/api/universe/config').catch(() => null);
+            if (configRes) setConfig(configRes);
+            const stateRes = await api.get<EngineState>('/api/state').catch(() => null);
+            if (stateRes) setEngineState(stateRes);
+        };
+        fetchGlobalStatus();
+        const interval = setInterval(fetchGlobalStatus, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const toggleScanner = async () => {
+        if (!config) return;
+        setIsTogglingScanner(true);
+        const endpoint = config.scanner_enabled ? '/api/universe/scanner/stop' : '/api/universe/scanner/start';
+        try {
+            await api.post(endpoint, {});
+            setConfig(prev => prev ? { ...prev, scanner_enabled: !config.scanner_enabled } : prev);
+        } finally {
+            setIsTogglingScanner(false);
+        }
+    };
+
+    const toggleEngine = async () => {
+        if (!engineState) return;
+        setIsTogglingEngine(true);
+        const endpoint = engineState.strategy_engine?.running ? '/api/engine/stop' : '/api/engine/start';
+        try {
+            await api.post(endpoint, {});
+            const res = await api.get<EngineState>('/api/state').catch(() => null);
+            if (res) setEngineState(res);
+        } finally {
+            setIsTogglingEngine(false);
+        }
+    };
 
     return (
         <header className="h-16 border-b border-border/50 bg-card/40 backdrop-blur-2xl flex items-center justify-between px-4 md:px-6 z-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
@@ -54,6 +100,45 @@ export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpe
             </div>
 
             <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mr-3">
+                    {/* Scanner Toggle */}
+                    <button
+                        onClick={toggleScanner}
+                        disabled={isTogglingScanner || !config}
+                        className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] uppercase tracking-wider font-bold transition-all duration-200",
+                            !config ? "border-transparent text-muted-foreground opacity-50 cursor-not-allowed"
+                                : config.scanner_enabled
+                                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20 hover:shadow-md"
+                                    : "bg-surface text-muted-foreground border-border/50 hover:bg-muted/50 hover:text-foreground hover:border-border hover:-translate-y-px"
+                        )}
+                        title={config?.scanner_enabled ? "Stop Scanner" : "Start Scanner"}
+                    >
+                        {config?.scanner_enabled ? (
+                            <><Square size={12} fill="currentColor" /> Stop Scanner</>
+                        ) : (
+                            <><Play size={12} fill="currentColor" /> Start Scanner</>
+                        )}
+                    </button>
+
+                    {/* Engine Toggle */}
+                    <button
+                        onClick={toggleEngine}
+                        disabled={isTogglingEngine || !engineState}
+                        className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] uppercase tracking-wider font-bold transition-all duration-200",
+                            !engineState ? "border-transparent text-muted-foreground opacity-50 cursor-not-allowed"
+                                : engineState.strategy_engine?.running
+                                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20 hover:shadow-md"
+                                    : "bg-surface text-muted-foreground border-border/50 hover:bg-muted/50 hover:text-foreground hover:border-border hover:-translate-y-px"
+                        )}
+                        title={engineState?.strategy_engine?.running ? "Stop Engine" : "Start Engine"}
+                    >
+                        <Zap size={14} className={cn(engineState?.strategy_engine?.running ? "animate-pulse" : "")} />
+                        {isTogglingEngine ? '...' : (engineState?.strategy_engine?.running ? 'Stop Engine' : 'Start Engine')}
+                    </button>
+                </div>
+
                 {/* PANIC BUTTON */}
                 <button
                     onClick={() => {

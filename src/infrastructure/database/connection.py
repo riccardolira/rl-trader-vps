@@ -24,8 +24,10 @@ class DatabasePool:
             except Exception as e:
                 log.warning(f"Failed to connect to MySQL: {e}. Falling back to SQLite...")
                 self.pool = await aiosqlite.connect("rl_trader_audit.db") # Single connection for SQLite
+                await self.pool.execute("PRAGMA journal_mode=WAL;")
+                await self.pool.execute("PRAGMA synchronous=NORMAL;")
                 self.is_mysql = False
-                log.info("Connected to local SQLite database: rl_trader_audit.db")
+                log.info("Connected to local SQLite database: rl_trader_audit.db (WAL Mode Enabled)")
         return self.pool
 
     async def close(self):

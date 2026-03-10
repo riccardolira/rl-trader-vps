@@ -36,3 +36,5 @@ Thumbs.db
 
 # Ignore sensitive configuration files (You should use environment variables or a specific config not tracked by Git for passwords)
 # If you have specific files with passwords, add them here.
+*config*.json
+*config_backup*.json

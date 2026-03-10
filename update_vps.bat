@@ -5,6 +5,12 @@ echo ==================================================
 echo.
 
 echo [1/3] Fetching latest updates from GitHub...
+
+:: Backup Custom Configs
+if exist universe_config.json copy /Y universe_config.json universe_config.json.bak
+if exist risk_config.json copy /Y risk_config.json risk_config.json.bak
+if exist strategy_config.json copy /Y strategy_config.json strategy_config.json.bak
+
 git fetch origin
 git reset --hard origin/main
 
@@ -14,6 +20,12 @@ if %errorlevel% neq 0 (
     pause
     exit /b %errorlevel%
 )
+
+:: Restore Custom Configs
+if exist universe_config.json.bak copy /Y universe_config.json.bak universe_config.json
+if exist risk_config.json.bak copy /Y risk_config.json.bak risk_config.json
+if exist strategy_config.json.bak copy /Y strategy_config.json.bak strategy_config.json
+
 echo [OK] Update downloaded successfully.
 echo.
 
