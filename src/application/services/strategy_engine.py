@@ -109,13 +109,13 @@ class StrategyEngine:
                     })
                 
                 # --- Step 4: MTF Confluency Check (Phase 2) ---
-                # Strict Policy -> Severe Penalty (-50) if CONTRA
+                # Strict Policy -> Moderate Penalty (-15) if CONTRA
                 if context.mtf_trend != AnalysisSide.NEUTRAL and candidate.side != AnalysisSide.NEUTRAL:
                      if context.mtf_trend != candidate.side:
-                         new_score = max(0.0, candidate.final_score - 50.0)
+                         new_score = max(0.0, candidate.final_score - 15.0)
                          candidate = candidate.copy(update={
                              "final_score": new_score,
-                             "score_mtf": -50.0,
+                             "score_mtf": -15.0,
                              "reason_code": candidate.reason_code + " | MTF_CONTRA"
                          })
                      else:

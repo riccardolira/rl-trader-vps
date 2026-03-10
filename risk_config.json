@@ -15,7 +15,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 200,
       "slippage_buffer_points": 100,
-      "min_score_to_trade": 75.0,
+      "min_score_to_trade": 60.0,
       "active": true
     },
     "CRYPTO": {
@@ -24,7 +24,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 5000,
       "slippage_buffer_points": 1500,
-      "min_score_to_trade": 70.0,
+      "min_score_to_trade": 55.0,
       "active": false
     },
     "INDICES_NY": {
@@ -33,7 +33,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 400,
       "slippage_buffer_points": 200,
-      "min_score_to_trade": 65.0,
+      "min_score_to_trade": 55.0,
       "active": true
     },
     "INDICES_B3": {
@@ -42,7 +42,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 25,
       "slippage_buffer_points": 10,
-      "min_score_to_trade": 65.0,
+      "min_score_to_trade": 55.0,
       "active": true
     },
     "INDICES_EU": {
@@ -51,7 +51,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 400,
       "slippage_buffer_points": 200,
-      "min_score_to_trade": 65.0,
+      "min_score_to_trade": 55.0,
       "active": true
     },
     "METALS": {
@@ -60,7 +60,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 500,
       "slippage_buffer_points": 150,
-      "min_score_to_trade": 65.0,
+      "min_score_to_trade": 55.0,
       "active": false
     },
     "COMMODITIES_AGRI": {
@@ -69,7 +69,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 2000,
       "slippage_buffer_points": 100,
-      "min_score_to_trade": 30.0,
+      "min_score_to_trade": 45.0,
       "active": true
     },
     "COMMODITIES_ENERGY": {
@@ -78,7 +78,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 5000,
       "slippage_buffer_points": 150,
-      "min_score_to_trade": 30.0,
+      "min_score_to_trade": 45.0,
       "active": true
     },
     "STOCKS_US": {
@@ -87,7 +87,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 25,
       "slippage_buffer_points": 10,
-      "min_score_to_trade": 75.0,
+      "min_score_to_trade": 60.0,
       "active": true
     },
     "STOCKS_BR": {
@@ -96,7 +96,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 15,
       "slippage_buffer_points": 10,
-      "min_score_to_trade": 70.0,
+      "min_score_to_trade": 60.0,
       "active": true
     },
     "STOCKS_EU": {
@@ -105,7 +105,7 @@
       "max_daily_dd_pct": 0.05,
       "spread_max_points": 25,
       "slippage_buffer_points": 10,
-      "min_score_to_trade": 75.0,
+      "min_score_to_trade": 60.0,
       "active": true
     }
   }

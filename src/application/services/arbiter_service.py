@@ -185,12 +185,19 @@ class ArbiterService:
                 
                 if volume < settings.EXECUTION_MIN_LOT:
                     loss_with_min_lot = settings.EXECUTION_MIN_LOT * sl_dist_points * tick_value
-                    log.warning(f"Arbiter: Rejeitado. Lote minimo ({settings.EXECUTION_MIN_LOT}) causaria perda de ${loss_with_min_lot:.2f} (Max permitido: ${risk_money:.2f}).")
-                    event_bus.publish("arbiter.trade_rejected", {"symbol": signal.symbol, "reason": f"Risco Excessivo: SL muito longo para o lote mínimo."})
-                    # Remove from pending since it was rejected
-                    if self._pending_drafts[signal.symbol]:
-                        self._pending_drafts[signal.symbol].pop()
-                    return
+                    
+                    hard_cap = getattr(guardian_service.config, "hard_risk_cap_money", 50.0)
+                    
+                    if loss_with_min_lot <= hard_cap:
+                         log.info(f"Arbiter: Volume calculado ({volume}) menor que minimo. Usando lote minimo ({settings.EXECUTION_MIN_LOT}) com risco de ${loss_with_min_lot:.2f} (Abaixo do Hard Cap ${hard_cap:.2f}).")
+                         volume = settings.EXECUTION_MIN_LOT
+                    else:
+                         log.warning(f"Arbiter: Rejeitado. Lote minimo ({settings.EXECUTION_MIN_LOT}) causaria perda de ${loss_with_min_lot:.2f} (Acima do Cap de ${hard_cap:.2f}).")
+                         event_bus.publish("arbiter.trade_rejected", {"symbol": signal.symbol, "reason": f"Risco Excessivo: SL (${loss_with_min_lot:.2f}) excede Hard Cap"})
+                         # Remove from pending since it was rejected
+                         if self._pending_drafts[signal.symbol]:
+                             self._pending_drafts[signal.symbol].pop()
+                         return
                 
             else:
                 volume = settings.EXECUTION_MIN_LOT
