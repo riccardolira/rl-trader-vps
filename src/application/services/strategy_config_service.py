@@ -1,7 +1,7 @@
 import json
 import os
 from typing import Dict, List, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from src.infrastructure.logger import log
 
 class StrategyConfigItem(BaseModel):
