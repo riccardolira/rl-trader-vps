@@ -38,7 +38,7 @@ jobs:
         username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         local-dir: ./frontend/dist/
-        server-dir: ./
+        server-dir: ./domains/clickandoffers.com/public_html/
         dangerous-clean-slate: false
         state-name: ''
         exclude: |
