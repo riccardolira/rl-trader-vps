@@ -59,3 +59,10 @@ jobs:
           mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
           quit
         "
+
+    - name: 🔍 Verify Live Deployment
+      run: |
+        echo "Fetching headers from https://clickandoffers.com"
+        curl -I https://clickandoffers.com
+        echo "Fetching content snippet..."
+        curl -s https://clickandoffers.com | head -n 20
