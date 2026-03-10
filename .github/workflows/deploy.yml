@@ -31,7 +31,8 @@ jobs:
       working-directory: ./frontend
       run: |
         npm run build
-        echo "<!-- Deploy $(date +%s) -->" >> dist/index.html
+        mv dist/index.html dist/index.php
+        sed -i '1s/^/<?php header("Cache-Control: no-cache, must-revalidate"); header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); ?>\n/' dist/index.php
       
     - name: 🚀 Install LFTP
       run: sudo apt-get update && sudo apt-get install -y lftp
