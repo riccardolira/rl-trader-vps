@@ -11,7 +11,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 function AppContent() {
   const [isManualOpen, setIsManualOpen] = useState(false);
@@ -32,7 +32,7 @@ function AppContent() {
   }
 
   return (
-    <HashRouter>
+    <>
       <Layout
         isManualOpen={isManualOpen}
         setIsManualOpen={setIsManualOpen}
@@ -49,7 +49,7 @@ function AppContent() {
       </Layout>
       <ManualOverlay isOpen={isManualOpen} onClose={() => setIsManualOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-    </HashRouter>
+    </>
   );
 }
 
