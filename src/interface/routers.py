@@ -245,6 +245,9 @@ def datetime_handler(x):
 
 async def broadcast_event_to_ws(event):
     try:
+        if getattr(event, "type", "") == "UNIVERSE_SNAPSHOT":
+            return # Skip broadcasting massive payload to prevent MemoryError crashes
+
         if hasattr(event, "model_dump_json"):
             msg = event.model_dump_json()
         elif hasattr(event, "json") and callable(event.json):

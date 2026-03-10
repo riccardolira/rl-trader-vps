@@ -6,6 +6,8 @@ import { api } from '../services/api';
 import type { EngineState } from '../services/api';
 import { wsClient } from '../core/net/wsClient';
 import { StrategyControlPanel } from '../components/operations/StrategyControlPanel';
+import { RiskControlPanel } from '../components/operations/RiskControlPanel';
+import { Link, useLocation } from 'react-router-dom';
 
 function formatPnlEstimate(diff: number, symbol: string, volume: number, assetClass?: string): string {
     const sym = (symbol || '').toUpperCase();
@@ -265,19 +267,24 @@ const PositionCard = React.memo(({ pos, handleClosePosition }: { pos: any, handl
 });
 
 export const OperationsPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'pipeline' | 'drafts' | 'positions' | 'strategies'>('pipeline');
+    const location = useLocation();
+
+    // Extract the active sub-tab from the URL path, defaulting to 'signals'
+    const activeRoute = location.pathname.split('/')[2] || 'signals';
+    const activeTab = ['signals', 'drafts', 'positions', 'strategies', 'risk'].includes(activeRoute) ? activeRoute : 'signals';
+
     const [engineState, setEngineState] = useState<EngineState | null>(null);
     const [signals, setSignals] = useState<any[]>([]);
     const [drafts, setDrafts] = useState<any[]>([]);
     const [positions, setPositions] = useState<any[]>([]);
     const [threats, setThreats] = useState<any[]>([]);
 
-
     const tabs = [
-        { id: 'pipeline', label: 'Signals Pipeline', icon: Zap },
-        { id: 'drafts', label: 'Risk & Drafts', icon: Activity },
-        { id: 'positions', label: 'Live Positions', icon: Cpu },
-        { id: 'strategies', label: 'Engine Tuning', icon: SlidersHorizontal },
+        { id: 'signals', label: 'Sinais', icon: Zap },
+        { id: 'drafts', label: 'Lote (Risk & Drafts)', icon: Activity },
+        { id: 'positions', label: 'Trades Ativos', icon: Cpu },
+        { id: 'strategies', label: 'Estratégia (Tuning)', icon: SlidersHorizontal },
+        { id: 'risk', label: 'Risco (Parameters)', icon: ShieldCheck },
     ] as const;
 
     useEffect(() => {
@@ -356,9 +363,9 @@ export const OperationsPage: React.FC = () => {
                     <div className="flex gap-2 items-center">
                         <div className="flex bg-muted/30 p-1.5 rounded-full border border-border/50 shadow-sm w-max overflow-x-auto max-w-full">
                             {tabs.map(tab => (
-                                <button
+                                <Link
                                     key={tab.id}
-                                    onClick={() => setActiveTab(tab.id as any)}
+                                    to={`/operations/${tab.id}`}
                                     className={cn(
                                         "flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200 whitespace-nowrap",
                                         activeTab === tab.id
@@ -368,7 +375,7 @@ export const OperationsPage: React.FC = () => {
                                 >
                                     <tab.icon size={16} />
                                     {tab.label}
-                                </button>
+                                </Link>
                             ))}
                         </div>
                     </div>
@@ -456,8 +463,8 @@ export const OperationsPage: React.FC = () => {
                     </div>
                 )}
 
-                {activeTab === 'pipeline' && (
-                    <div className="flex flex-col h-full overflow-y-auto">
+                {activeTab === 'signals' && (
+                    <div className="flex flex-col h-full overflow-y-auto w-full max-w-5xl mx-auto">
                         {signals.length === 0 ? (
                             <div className="flex flex-col h-full items-center justify-center text-muted-foreground flex-1">
                                 <Zap size={48} className="mb-4 opacity-50" />
@@ -508,6 +515,12 @@ export const OperationsPage: React.FC = () => {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'risk' && (
+                    <div className="flex flex-col h-full overflow-y-auto">
+                        <RiskControlPanel />
                     </div>
                 )}
             </div>

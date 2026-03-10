@@ -3,9 +3,11 @@
   "max_trades_open": 10,
   "max_trades_per_asset": 1,
   "max_daily_dd_pct": 0.05,
-  "news_filter_active": true,
+  "news_filter_active": false,
   "spread_guard_active": true,
   "max_lot_size": 0.15,
+  "global_max_spread_points": 500,
+  "global_max_daily_loss_currency": -50.0,
   "profiles": {
     "FOREX": {
       "type": "FOREX",

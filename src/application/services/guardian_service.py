@@ -56,8 +56,10 @@ class GuardianService:
                 
         if needs_save:
             try:
+                # Use native Pydantic .json() approach instead of dict() dumping to avoid Enum serialization errors.
+                json_data = config.model_dump_json(indent=2) if hasattr(config, "model_dump_json") else config.json(indent=2)
                 with open(self.config_path, "w") as f:
-                    json.dump(config.dict(), f, indent=2)
+                    f.write(json_data)
             except Exception as e:
                 log.error(f"Failed to save default risk config profiles: {e}")
 
@@ -68,8 +70,9 @@ class GuardianService:
         current.update(updates)
         self.config = RiskConfig(**current)
         try:
+            json_data = self.config.model_dump_json(indent=2) if hasattr(self.config, "model_dump_json") else self.config.json(indent=2)
             with open(self.config_path, "w") as f:
-                json.dump(self.config.dict(), f, indent=2)
+                f.write(json_data)
         except Exception as e:
             log.error(f"Failed to save risk config: {e}")
 
@@ -151,7 +154,7 @@ class GuardianService:
             gate_failed = "GATE_SAFETY_PARAM"
 
         # Mock Risk Check
-        if draft.raw_volume > self.config.max_lot_size:
+        if round(draft.raw_volume, 4) > self.config.max_lot_size:
             is_approved = False
             rejection_reason = f"Volume too high (Max {self.config.max_lot_size})"
             gate_failed = "GATE_FAT_FINGER"

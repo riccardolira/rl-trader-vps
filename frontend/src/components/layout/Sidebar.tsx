@@ -1,21 +1,34 @@
 import React from 'react';
-import { LayoutDashboard, ScrollText, ShieldCheck, Cpu, PieChart, X } from 'lucide-react';
+import { LayoutDashboard, ScrollText, Cpu, PieChart, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
 interface SidebarProps {
-    activeTab: string;
-    setActiveTab: (tab: string) => void;
     isMobileMenuOpen: boolean;
     setIsMobileMenuOpen: (open: boolean) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
+    const location = useLocation();
+
+    // Determine active tab by looking at the first segment of the path
+    const activeRoute = location.pathname.split('/')[1] || 'scanner';
+
+    // Check if the current route is nested under operations to activate the operations tab
+    // Risk is now under operations, so it will highlight operations
+    const getActiveTabId = () => {
+        if (['scanner', 'universe'].includes(activeRoute)) return 'scanner';
+        if (['operations'].includes(activeRoute)) return 'operations';
+        return activeRoute;
+    };
+
+    const activeTab = getActiveTabId();
+
     const navItems = [
-        { id: 'universe', label: 'Universe', icon: LayoutDashboard },
-        { id: 'operations', label: 'Motor de Operações', icon: Cpu },
-        { id: 'analytics', label: 'Analytics', icon: PieChart },
-        { id: 'logs', label: 'Logs & Transparência', icon: ScrollText },
-        { id: 'risk', label: 'Risco', icon: ShieldCheck },
+        { id: 'scanner', path: '/scanner', label: 'Scanner', icon: LayoutDashboard },
+        { id: 'operations', path: '/operations', label: 'Motor de Operações', icon: Cpu },
+        { id: 'analytics', path: '/analytics', label: 'Analytics', icon: PieChart },
+        { id: 'logs', path: '/logs', label: 'Logs & Transparência', icon: ScrollText },
     ];
 
     return (
@@ -57,9 +70,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
                         const Icon = item.icon;
                         const isActive = activeTab === item.id;
                         return (
-                            <button
+                            <Link
                                 key={item.id}
-                                onClick={() => setActiveTab(item.id)}
+                                to={item.path}
+                                onClick={() => setIsMobileMenuOpen(false)}
                                 className={cn(
                                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 border group",
                                     isActive
@@ -70,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMob
                                 {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-lg" />}
                                 <Icon size={18} className={cn("transition-transform", isActive ? "scale-110" : "group-hover:scale-110 group-hover:text-primary/70")} />
                                 {item.label}
-                            </button>
+                            </Link>
                         );
                     })}
                 </nav>

@@ -1,21 +1,19 @@
 import { useState, useEffect } from 'react';
 import { wsClient } from './core/net/wsClient';
 import { Layout } from './components/layout/Layout';
-import { UniversePage } from './pages/UniversePage';
+import { ScannerPage } from './pages/ScannerPage';
 import { OperationsPage } from './pages/OperationsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { LogsPage } from './pages/LogsPage';
-import { RiskPage } from './pages/RiskPage';
 import { ManualOverlay } from './components/common/ManualOverlay';
 import { SettingsModal } from './components/common/SettingsModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+
 function AppContent() {
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('activeTab') || 'universe';
-  });
   const [isManualOpen, setIsManualOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { isAuthenticated } = useAuth();
@@ -29,33 +27,29 @@ function AppContent() {
     };
   }, [isAuthenticated]);
 
-  useEffect(() => {
-    localStorage.setItem('activeTab', activeTab);
-  }, [activeTab]);
-
   if (!isAuthenticated) {
     return <LoginPage />;
   }
 
   return (
-    <>
+    <HashRouter>
       <Layout
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         isManualOpen={isManualOpen}
         setIsManualOpen={setIsManualOpen}
         isSettingsOpen={isSettingsOpen}
         setIsSettingsOpen={setIsSettingsOpen}
       >
-        <div className={activeTab === 'universe' ? 'block h-full' : 'hidden'}><UniversePage /></div>
-        <div className={activeTab === 'operations' ? 'block h-full' : 'hidden'}><OperationsPage /></div>
-        <div className={activeTab === 'analytics' ? 'block h-full' : 'hidden'}><AnalyticsPage /></div>
-        <div className={activeTab === 'logs' ? 'block h-full' : 'hidden'}><LogsPage /></div>
-        <div className={activeTab === 'risk' ? 'block h-full' : 'hidden'}><RiskPage /></div>
+        <Routes>
+          <Route path="/" element={<Navigate to="/scanner" replace />} />
+          <Route path="/scanner/*" element={<ScannerPage />} />
+          <Route path="/operations/*" element={<OperationsPage />} />
+          <Route path="/analytics/*" element={<AnalyticsPage />} />
+          <Route path="/logs/*" element={<LogsPage />} />
+        </Routes>
       </Layout>
       <ManualOverlay isOpen={isManualOpen} onClose={() => setIsManualOpen(false)} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-    </>
+    </HashRouter>
   );
 }
 

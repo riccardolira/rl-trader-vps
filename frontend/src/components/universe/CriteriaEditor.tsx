@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Save, HelpCircle, Loader2 } from 'lucide-react';
+import { Save, HelpCircle, Loader2, Shield } from 'lucide-react';
 import { api } from '../../services/api';
 import type { UniverseConfig, ClassWeights } from '../../services/api';
 
 interface Props {
     config: UniverseConfig | null;
+    snapshot?: any;
     onSaved: () => void;
 }
 
@@ -17,7 +18,7 @@ const TooltipIcon = ({ text }: { text: string }) => (
     </div>
 );
 
-export const CriteriaEditor: React.FC<Props> = ({ config, onSaved }) => {
+export const CriteriaEditor: React.FC<Props> = ({ config, snapshot, onSaved }) => {
     const [localConfig, setLocalConfig] = useState<UniverseConfig | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
@@ -71,6 +72,20 @@ export const CriteriaEditor: React.FC<Props> = ({ config, onSaved }) => {
             setLocalConfig(JSON.parse(JSON.stringify(config)));
             setIsDirty(false);
         }
+    };
+
+    const toggleClass = (cls: string, enabled: boolean) => {
+        setLocalConfig((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                classes_enabled: {
+                    ...prev.classes_enabled,
+                    [cls]: enabled
+                }
+            };
+        });
+        setIsDirty(true);
     };
 
     return (
@@ -200,6 +215,39 @@ export const CriteriaEditor: React.FC<Props> = ({ config, onSaved }) => {
                             </div>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            {/* Classes Toggles */}
+            <section>
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <Shield className="text-primary" size={20} />
+                    Universe Classes
+                    <TooltipIcon text="Habilita ou desabilita o motor de rodar os critérios, buscar dados e processar a classe. Classes desativadas fecham as posições abertas caso o motor esteja rodando." />
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {localConfig.classes_enabled && Object.entries(localConfig.classes_enabled).map(([cls, enabled]) => {
+                        const count = snapshot?.class_counts?.[cls] ?? 0;
+                        return (
+                            <div key={cls} className={`p-3 rounded-lg border flex flex-col justify-between gap-3 ${enabled ? 'bg-card border-border' : 'bg-muted/30 border-muted opacity-80'}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="font-mono font-bold text-sm tracking-tighter">{cls}</span>
+                                    {count > 0 && (
+                                        <span className="bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                            {count}
+                                        </span>
+                                    )}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleClass(cls, !enabled)}
+                                    className={`w-10 h-6 rounded-full transition-colors relative ${enabled ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
+                                >
+                                    <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-4' : ''}`} />
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
             </section>
 

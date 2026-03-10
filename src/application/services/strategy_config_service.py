@@ -50,8 +50,9 @@ class StrategyConfigService:
 
     def _save_config(self, config: StrategyConfig):
         try:
+            json_data = config.model_dump_json(indent=2) if hasattr(config, "model_dump_json") else config.json(indent=2)
             with open(self.config_path, "w", encoding="utf-8") as f:
-                json.dump(config.dict(), f, indent=2)
+                f.write(json_data)
         except Exception as e:
             log.error(f"Failed to save strategy config: {e}")
 

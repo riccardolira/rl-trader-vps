@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, TrendingUp, AlertOctagon, Wallet, Save } from 'lucide-react';
-import { api } from '../services/api';
+﻿import React, { useState, useEffect } from 'react';
+import { Shield, TrendingUp, Wallet, Save } from 'lucide-react';
+import { api } from '../../services/api';
 
-export const RiskPage: React.FC = () => {
+export const RiskControlPanel: React.FC = () => {
     const [config, setConfig] = useState<any>(null);
     const [saving, setSaving] = useState(false);
 
@@ -20,21 +20,16 @@ export const RiskPage: React.FC = () => {
         setSaving(true);
         await api.post('/api/risk/config', config);
         setSaving(false);
-        // show toast if we had one
     };
 
     if (!config) {
-        return <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg animate-pulse">Carregando métricas de risco...</div>;
+        return <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg flex-1 flex flex-col items-center justify-center h-full animate-pulse">Carregando métricas de risco...</div>;
     }
 
     return (
-        <div className="space-y-6 h-full flex flex-col overflow-y-auto pb-8">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Risk Guardian</h2>
-                    <p className="text-sm text-muted-foreground mt-1">Safety Gates & Exposure Limits</p>
-                </div>
-                <div className="flex gap-2 items-center">
+        <div className="space-y-6 h-full flex flex-col pb-8">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-border/10">
+                <div className="flex gap-2 items-center ml-auto">
                     <button
                         onClick={handleSave}
                         disabled={saving}
@@ -249,28 +244,6 @@ export const RiskPage: React.FC = () => {
                         </div>
                     </div>
                 )}
-
-                {/* 4. Emergency */}
-                <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-                    <div className="flex items-center gap-3 mb-4 text-destructive relative z-10">
-                        <div className="p-2.5 bg-destructive/10 rounded-xl text-destructive border border-destructive/20">
-                            <AlertOctagon className="h-5 w-5 animate-pulse" />
-                        </div>
-                        <h3 className="font-semibold text-lg tracking-tight">Panic Room</h3>
-                    </div>
-                    <p className="text-xs text-destructive/80 mb-6 font-medium tracking-wide uppercase relative z-10">
-                        Emergency controls interrupt automatic execution instantly.
-                    </p>
-                    <div className="flex flex-col gap-3 relative z-10">
-                        <button className="w-full bg-destructive text-destructive-foreground font-bold py-3.5 rounded-xl hover:bg-destructive/90 transition-colors shadow-[0_0_20px_rgba(239,68,68,0.3)] active:scale-95 text-sm tracking-widest uppercase">
-                            HALT ALL TRADING
-                        </button>
-                        <button className="w-full bg-background/50 border border-destructive/50 text-destructive font-bold py-3.5 rounded-xl hover:bg-destructive/10 transition-colors disabled:opacity-50 active:scale-95 text-sm tracking-widest uppercase">
-                            CLOSE ALL OPEN POSITIONS
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     );

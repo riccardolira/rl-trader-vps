@@ -20,6 +20,4 @@ start "RL Trader V3 Dashboard" cmd /k "cd /d %~dp0\frontend && npm run dev"
 
 echo System starting... Check the new windows.
 echo Dashboard URL: http://localhost:5173 (usually)
-:: Auto-open Browser
-start http://localhost:5173
 pause

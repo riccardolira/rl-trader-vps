@@ -34,13 +34,25 @@ except ImportError:
     # Fail-safe standard logging
     import logging
     
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(name)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
+    LOG_DIR = Path("logs")
+    LOG_DIR.mkdir(exist_ok=True)
+    
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    
+    # Console handler
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    
+    # File handler
+    fh = logging.FileHandler(LOG_DIR / "rl_trader.log", encoding="utf-8")
+    fh.setFormatter(formatter)
+    
     log = logging.getLogger("RL_TRADER")
-    log.warning("Loguru not found. Using standard logging fallback.")
+    log.setLevel(logging.DEBUG)
+    log.addHandler(ch)
+    log.addHandler(fh)
+    
+    log.warning("Loguru not found. Using standard logging fallback with FileHandler.")
 
     # Mocking success/error/warning methods to match loguru API if needed for basic compat
     def _log_proxy(level, msg):

@@ -2,16 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { UniverseStatusStrip } from '../components/universe/UniverseStatusStrip';
 import { RankingTable } from '../components/universe/RankingTable';
 import { AssetDrawer } from '../components/universe/AssetDrawer';
-import { ClassesAndBlockedView } from '../components/universe/ClassesAndBlockedView';
+import { MarketSchedulesView } from '../components/universe/MarketSchedulesView';
 import { CriteriaEditor } from '../components/universe/CriteriaEditor';
 import { EconomicCalendar } from '../components/universe/EconomicCalendar';
-import { CorrelationHeatmap } from '../components/universe/CorrelationHeatmap';
+import { ScannerFiltersView } from '../components/universe/ScannerFiltersView';
 import { api } from '../services/api';
 import type { UniverseSnapshot, RankingRow, UniverseConfig } from '../services/api';
 import { Layers, ListFilter, Settings, AlertTriangle, Activity, Calendar } from 'lucide-react';
 import { uxWatchdog } from '../core/watchdog/uxWatchdog';
 import { wsClient } from '../core/net/wsClient';
 import { cn } from '../lib/utils';
+import { Link, useLocation } from 'react-router-dom';
 
 // For diagnostics modal
 interface DiagnosticsData extends UniverseSnapshot {
@@ -67,15 +68,19 @@ export const WatchdogBanner: React.FC<{
     );
 };
 
-export const UniversePage = () => {
+export const ScannerPage = () => {
+    const location = useLocation();
+
+    // Extract the active sub-tab from the URL path, defaulting to 'selection'
+    const activeRoute = location.pathname.split('/')[2] || 'selection';
+    const activeTab = ['selection', 'schedule', 'criteria', 'news', 'filters'].includes(activeRoute) ? activeRoute : 'selection';
+
     const [snapshot, setSnapshot] = useState<DiagnosticsData | null>(null);
     const [ranking, setRanking] = useState<RankingRow[]>([]);
     const [config, setConfig] = useState<UniverseConfig | null>(null);
     const [selectedAsset, setSelectedAsset] = useState<RankingRow | null>(null);
     const [manualBasket, setManualBasket] = useState<Set<string>>(new Set());
     const [showDiagnostics, setShowDiagnostics] = useState(false);
-
-    const [activeTab, setActiveTab] = useState<'ranking' | 'filters' | 'criteria' | 'calendar' | 'heatmap'>('ranking');
 
     const [wdState, setWdState] = useState(uxWatchdog.getStatus());
     const [wsState, setWsState] = useState({
@@ -261,40 +266,40 @@ export const UniversePage = () => {
 
             {/* Tabs - Segmented Control */}
             <div className="flex bg-muted/30 p-1.5 rounded-full w-max border border-border/50 shadow-sm overflow-x-auto max-w-full">
-                <button
-                    onClick={() => setActiveTab('ranking')}
-                    className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'ranking' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
+                <Link
+                    to="/scanner/selection"
+                    className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'selection' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <Layers size={16} /> Live Ranking
-                </button>
-                <button
-                    onClick={() => setActiveTab('filters')}
-                    className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'filters' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
+                    <Layers size={16} /> Seleção de Ativos
+                </Link>
+                <Link
+                    to="/scanner/schedule"
+                    className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'schedule' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <ListFilter size={16} /> Classes & Blocked
-                </button>
-                <button
-                    onClick={() => setActiveTab('criteria')}
+                    <Calendar size={16} /> Horário Operacional
+                </Link>
+                <Link
+                    to="/scanner/criteria"
                     className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'criteria' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <Settings size={16} /> Criteria Editor
-                </button>
-                <button
-                    onClick={() => setActiveTab('calendar')}
-                    className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'calendar' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
+                    <Settings size={16} /> Critérios
+                </Link>
+                <Link
+                    to="/scanner/news"
+                    className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'news' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <Calendar size={16} /> Macro Events
-                </button>
-                <button
-                    onClick={() => setActiveTab('heatmap')}
-                    className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'heatmap' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
+                    <ListFilter size={16} /> Notícias
+                </Link>
+                <Link
+                    to="/scanner/filters"
+                    className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'filters' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <Activity size={16} /> Anti-Cloner
-                </button>
+                    <Activity size={16} /> Filtros
+                </Link>
             </div>
 
             <div className="flex-1 overflow-hidden">
-                {activeTab === 'ranking' && (
+                {activeTab === 'selection' && (
                     <div className="h-full flex flex-col lg:flex-row gap-6">
                         {/* Ranking Table */}
                         <div className="flex-1 overflow-auto">
@@ -369,27 +374,27 @@ export const UniversePage = () => {
                     </div>
                 )}
 
-                {activeTab === 'filters' && (
+                {activeTab === 'schedule' && (
                     <div className="h-full overflow-auto">
-                        <ClassesAndBlockedView config={config} snapshot={snapshot} onConfigUpdate={fetchData} />
+                        <MarketSchedulesView config={config} onConfigUpdate={fetchData} />
                     </div>
                 )}
 
                 {activeTab === 'criteria' && (
                     <div className="h-full overflow-auto p-4">
-                        <CriteriaEditor config={config} onSaved={fetchData} />
+                        <CriteriaEditor config={config} snapshot={snapshot} onSaved={fetchData} />
                     </div>
                 )}
 
-                {activeTab === 'calendar' && (
+                {activeTab === 'news' && (
                     <div className="h-full overflow-auto p-4">
                         <EconomicCalendar />
                     </div>
                 )}
 
-                {activeTab === 'heatmap' && (
-                    <div className="h-full overflow-auto p-4">
-                        <CorrelationHeatmap />
+                {activeTab === 'filters' && (
+                    <div className="h-full overflow-auto">
+                        <ScannerFiltersView config={config} onConfigUpdate={fetchData} />
                     </div>
                 )}
             </div>
