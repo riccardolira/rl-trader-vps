@@ -29,7 +29,9 @@ jobs:
       
     - name: 🔨 Build Project
       working-directory: ./frontend
-      run: npm run build
+      run: |
+        npm run build
+        echo "<!-- Deploy $(date +%s) -->" >> dist/index.html
       
     - name: 🚀 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
