@@ -64,6 +64,10 @@ class SMCStrategy(IStrategy):
         current_low = lows.iloc[-1]
         current_high = highs.iloc[-1]
         
+        # Get Dynamic Configs
+        dyn_config = context.strategy_configs.get(self.name, {})
+        MIN_WICK_PCT = dyn_config.get("min_rejection_wick_pct", 0.40)
+
         # 2.5 Anatomy of the Candle (Price Action Filter)
         candle_range = current_high - current_low
         if candle_range > 0:
@@ -79,7 +83,7 @@ class SMCStrategy(IStrategy):
             if fvg['type'] == 'BULLISH':
                 # Bullish FVG needs price to dip into it. AND we need to see the buyers defending it (Lower Wick Rejection)
                 if current_low <= fvg['top'] and current_high >= fvg['bottom']:
-                    if lower_wick_pct >= 0.40: # At least 40% of the candle is a bottom tail
+                    if lower_wick_pct >= MIN_WICK_PCT: # At least X% of the candle is a bottom tail
                         side = AnalysisSide.BUY
                         score_signal = 90.0 # Confirmed Mitigation with Rejection
                         reason = "FVG_MITIGATION_BULL_REJECTION"
@@ -91,7 +95,7 @@ class SMCStrategy(IStrategy):
             elif fvg['type'] == 'BEARISH':
                 # Bearish FVG needs price to spike up into it AND sellers smashing it down (Upper Wick Rejection)
                 if current_high >= fvg['bottom'] and current_low <= fvg['top']:
-                    if upper_wick_pct >= 0.40:
+                    if upper_wick_pct >= MIN_WICK_PCT:
                         side = AnalysisSide.SELL
                         score_signal = 90.0
                         reason = "FVG_MITIGATION_BEAR_REJECTION"

@@ -30,15 +30,19 @@ class BreakoutStrategy(IStrategy):
         side = AnalysisSide.NEUTRAL
         score_signal = 0.0
         reason = "OK"
-        
+        # Get Dynamic Configs
+        dyn_config = context.strategy_configs.get(self.name, {})
+        SQUEEZE_COMP_PCT = dyn_config.get("squeeze_compression_pct", 30.0)
+        MIN_VOL_RATIO = dyn_config.get("min_volume_ratio", 1.25)
+
         # 1. Squeeze Condition (Context)
-        # Squeeze percentile must indicate compression (e.g. bottom 30%)
-        is_squeeze = squeeze_pct < 30.0
+        # Squeeze percentile must indicate compression (e.g. bottom X%)
+        is_squeeze = squeeze_pct < SQUEEZE_COMP_PCT
         
         # 2. Institutional Volume Check
         # Breakouts are fake unless volume is higher than the moving average (VMA_20)
         vol_spike_ratio = context.indicators.get('vol_spike_ratio', 1.0)
-        is_volume_backed = vol_spike_ratio > 1.25 # Require 25% more volume than average
+        is_volume_backed = vol_spike_ratio > MIN_VOL_RATIO # Require X times more volume than average
         
         # 3. Breakout Trigger
         # Close OUTSIDE Bands AND Accompanied by true Volume

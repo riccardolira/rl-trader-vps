@@ -32,9 +32,14 @@ class OrderFlowStrategy(IStrategy):
         score_signal = 0.0
         reason = "OK"
         
-        # 1. Mathematical Trigger: Volume Infiltration (1.5x the average)
-        # Instead of 2.5x which only happens on NFP, 1.5x indicates heavy institutional stepping.
-        if vol_spike_ratio < 1.5:
+        # Get Dynamic Configs
+        dyn_config = context.strategy_configs.get(self.name, {})
+        MIN_VOL_SPIKE = dyn_config.get("min_volume_spike_ratio", 1.5)
+        WINNER_CLOSE = dyn_config.get("winner_close_pct", 0.70)
+        LOSER_CLOSE = 1.0 - WINNER_CLOSE
+
+        # 1. Mathematical Trigger: Volume Infiltration 
+        if vol_spike_ratio < MIN_VOL_SPIKE:
              # Regular market noise, ignore.
              return StrategyCandidate(
                 symbol=context.symbol,
@@ -64,12 +69,12 @@ class OrderFlowStrategy(IStrategy):
             
         close_pct = (cur_close - cur_low) / candle_range
         
-        # If closing in the top 30% -> Buyers won the volume spike
-        if close_pct >= 0.70:
+        # If closing in the top config% -> Buyers won the volume spike
+        if close_pct >= WINNER_CLOSE:
              side = AnalysisSide.BUY
              score_signal = 80.0
-        # If closing in the bottom 30% -> Sellers won the volume spike
-        elif close_pct <= 0.30:
+        # If closing in the bottom config% -> Sellers won the volume spike
+        elif close_pct <= LOSER_CLOSE:
              side = AnalysisSide.SELL
              score_signal = 80.0
         else:

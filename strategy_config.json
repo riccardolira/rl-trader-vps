@@ -1,34 +1,69 @@
 {
+  "_ai_control_header": {
+    "auto_tuning_enabled": false,
+    "last_tuned_by": "human",
+    "tuning_frequency_hours": 24,
+    "max_drift_pct": 20.0
+  },
   "strategies": {
     "TrendFollowing": {
       "name": "TrendFollowing",
       "enabled": true,
       "weight_multiplier": 1.0,
-      "min_score_threshold": 65.0
+      "min_score_threshold": 65.0,
+      "parameters": {
+        "_description_max_atr": "FISICA DO ELASTICO: Define o quao longe o preco pode estar da Media 20 (medido em ATRs) antes do robo considerar que e uma exaustao perigosa demais para entrar.",
+        "max_atr_distance_tops": 2.0,
+        "_description_pullback": "PRECISAO DO PULLBACK: Define a distancia (em fracao de ATR) que a minima/maxima da vela precisa chegar perto da Media 20 para ser um 'Retorno a Media' valido.",
+        "pullback_precision_atr": 0.5
+      }
     },
     "MeanReversion": {
       "name": "MeanReversion",
       "enabled": true,
       "weight_multiplier": 1.0,
-      "min_score_threshold": 40.0
+      "min_score_threshold": 40.0,
+      "parameters": {
+        "_description_percentiles": "MAPA DE TENSAO: Verifica as ultimas 100 velas da moeda. Se o RSI estiver abaixo do 'rsi_bottom_percentile' (ex: 10%), ele esta nos 10% de maior panico historico.",
+        "rsi_bottom_percentile": 10.0,
+        "rsi_top_percentile": 90.0,
+        "_description_squeeze": "FILTRO DE LATERALIZACAO: Opera apenas se a Banda de Bollinger estiver relaxada abaixo deste valor.",
+        "max_squeeze_allowed": 40.0
+      }
     },
     "VolatilityBreakout": {
       "name": "VolatilityBreakout",
       "enabled": true,
       "weight_multiplier": 1.0,
-      "min_score_threshold": 45.0
+      "min_score_threshold": 45.0,
+      "parameters": {
+        "_description_squeeze_pct": "PONTO DE PRESSAO: Indica compressao da Banda de Bollinger obrigatoria antes de romper o topo/fundo.",
+        "squeeze_compression_pct": 30.0,
+        "_description_volume": "CONFIRMACAO INSTITUCIONAL: Exige que a vela de rompimento tenha [X] vezes mais volume que a media (VMA 20).",
+        "min_volume_ratio": 1.25
+      }
     },
     "SmartMoney": {
       "name": "SmartMoney",
       "enabled": true,
       "weight_multiplier": 1.0,
-      "min_score_threshold": 65.0
+      "min_score_threshold": 65.0,
+      "parameters": {
+        "_description_pinbar": "DEFESA INSTITUCIONAL: Exige que a vela toque no FVG e deixe um Pavio de Rejeicao do tamanho deste percentual (ex: 0.40 = 40% de pavio absorvendo).",
+        "min_rejection_wick_pct": 0.40
+      }
     },
     "OrderFlowScalping": {
       "name": "OrderFlowScalping",
       "enabled": true,
       "weight_multiplier": 1.0,
-      "min_score_threshold": 35.0
+      "min_score_threshold": 35.0,
+      "parameters": {
+        "_description_spike": "DETECTOR DE BALEIAS: Aciona quando nota uma injecao anormal de capital. 1.5 exige 50% de volume acima do historico normal.",
+        "min_volume_spike_ratio": 1.50,
+        "_description_winner": "VENCEDOR DA BRIGA: Exige que a vela direcional comprida feche empurrando o topo/fundo nos [X] % extremos.",
+        "winner_close_pct": 0.70
+      }
     }
   }
 }

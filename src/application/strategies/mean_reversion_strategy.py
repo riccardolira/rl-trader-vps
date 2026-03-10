@@ -34,17 +34,23 @@ class MeanReversionStrategy(IStrategy):
         reason = "OK"
         current_price = context.price_close
         
+        # Get Dynamic Configs
+        dyn_config = context.strategy_configs.get(self.name, {})
+        RSI_BOTTOM_PCT = dyn_config.get("rsi_bottom_percentile", 10.0)
+        RSI_TOP_PCT = dyn_config.get("rsi_top_percentile", 90.0)
+        MAX_SQUEEZE = dyn_config.get("max_squeeze_allowed", 40.0)
+
         # Volatility Gate: Do not revert if bands are squeezing (breakout imminent)
-        if squeeze_pct < 40.0:
+        if squeeze_pct < MAX_SQUEEZE:
             return StrategyCandidate(
                 symbol=context.symbol,
                 strategy_name=self.name,
                 side=AnalysisSide.NEUTRAL,
-                reason_code="VOLATILITY_SQUEEZE_WARNING"
+                reason_code=f"VOLATILITY_SQUEEZE_WARNING_<{MAX_SQUEEZE}"
             )
 
         # 1. Signal Logic: Historical Extremes (Percentiles)
-        # Instead of static RSI < 25, we compute if current RSI is in the bottom 5% of its own 100-bar history.
+        # Instead of static RSI < 25, we compute if current RSI is in the bottom/top X% of its own 100-bar history.
         closes = pd.Series(context.metadata.get('closes', []))
         if len(closes) < 50:
              return StrategyCandidate(symbol=context.symbol, strategy_name=self.name, side=AnalysisSide.NEUTRAL, reason_code="INSUFFICIENT_HISTORY_FOR_PERCENTILES")
@@ -63,18 +69,18 @@ class MeanReversionStrategy(IStrategy):
         # Calculate Percentile (0.0 to 100.0)
         rsi_percentile = (recent_rsis < rsi_14).mean() * 100.0
         
-        # A true oversold is in the bottom 10% of History, not just arbitrarily < 25.
-        is_dynamic_oversold = rsi_percentile < 10.0 and current_price <= bb_lower
-        is_dynamic_overbought = rsi_percentile > 90.0 and current_price >= bb_upper
+        # A true oversold is in the bottom config% of History
+        is_dynamic_oversold = rsi_percentile < RSI_BOTTOM_PCT and current_price <= bb_lower
+        is_dynamic_overbought = rsi_percentile > RSI_TOP_PCT and current_price >= bb_upper
 
         if is_dynamic_oversold:
              side = AnalysisSide.BUY
              # Stronger signal closer to 0 percentile
-             score_signal = 80.0 + (10.0 - rsi_percentile) * 2.0 
+             score_signal = 80.0 + (RSI_BOTTOM_PCT - rsi_percentile) * (20.0 / RSI_BOTTOM_PCT) if RSI_BOTTOM_PCT > 0 else 100.0
              score_signal = min(score_signal, 100.0)
         elif is_dynamic_overbought:
              side = AnalysisSide.SELL
-             score_signal = 80.0 + (rsi_percentile - 90.0) * 2.0
+             score_signal = 80.0 + (rsi_percentile - RSI_TOP_PCT) * (20.0 / (100.0 - RSI_TOP_PCT)) if RSI_TOP_PCT < 100 else 100.0
              score_signal = min(score_signal, 100.0)
         else:
              score_signal = 0.0 # No mathematical extreme

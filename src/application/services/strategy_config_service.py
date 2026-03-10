@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, List
+from typing import Dict, List, Any
 from pydantic import BaseModel
 from src.infrastructure.logger import log
 
@@ -9,8 +9,16 @@ class StrategyConfigItem(BaseModel):
     enabled: bool
     weight_multiplier: float
     min_score_threshold: float
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+class ControlHeader(BaseModel):
+    auto_tuning_enabled: bool = False
+    last_tuned_by: str = "human"
+    tuning_frequency_hours: int = 24
+    max_drift_pct: float = 20.0
 
 class StrategyConfig(BaseModel):
+    _ai_control_header: ControlHeader = Field(default_factory=ControlHeader, alias="_ai_control_header")
     strategies: Dict[str, StrategyConfigItem]
 
 class StrategyConfigService:
@@ -31,11 +39,11 @@ class StrategyConfigService:
         # Fill missing default profiles
         needs_save = False
         default_strategies = {
-            "TrendFollowing": StrategyConfigItem(name="TrendFollowing", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0),
-            "MeanReversion": StrategyConfigItem(name="MeanReversion", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0),
-            "VolatilityBreakout": StrategyConfigItem(name="VolatilityBreakout", enabled=False, weight_multiplier=1.0, min_score_threshold=40.0),
-            "SmartMoney": StrategyConfigItem(name="SmartMoney", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0),
-            "OrderFlowScalping": StrategyConfigItem(name="OrderFlowScalping", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0)
+            "TrendFollowing": StrategyConfigItem(name="TrendFollowing", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0, parameters={}),
+            "MeanReversion": StrategyConfigItem(name="MeanReversion", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0, parameters={}),
+            "VolatilityBreakout": StrategyConfigItem(name="VolatilityBreakout", enabled=False, weight_multiplier=1.0, min_score_threshold=40.0, parameters={}),
+            "SmartMoney": StrategyConfigItem(name="SmartMoney", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0, parameters={}),
+            "OrderFlowScalping": StrategyConfigItem(name="OrderFlowScalping", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0, parameters={})
         }
         
         for name, default_cfg in default_strategies.items():

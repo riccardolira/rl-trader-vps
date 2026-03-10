@@ -23,17 +23,28 @@ class TrendStrategy(IStrategy):
                 symbol=context.symbol,
                 strategy_name=self.name,
                 side=AnalysisSide.NEUTRAL,
-                reason_code="MISSING_SMA20"
-            )
-
+        
         current_price = context.price_close
         side = AnalysisSide.NEUTRAL
         score_signal = 0.0
-        reason = "OK"
-        
-        # 1. Basic Signal Logic: Price vs SMA20
+        # 1. Component Extractors
+        sma_20 = context.indicators.get('sma_20')
         adx = context.adx_value
         rsi = context.indicators.get('rsi_14', 50.0)
+        
+        # Guard Clause: Missing Data or NaN
+        if sma_20 is None or pd.isna(sma_20):
+            return StrategyCandidate(
+                symbol=context.symbol,
+                strategy_name=self.name,
+                side=AnalysisSide.NEUTRAL,
+                reason_code="MISSING_SMA20"
+            )
+            
+        # Get Dynamic Configs
+        dyn_config = context.strategy_configs.get(self.name, {})
+        MAX_ATR_DIST = dyn_config.get("max_atr_distance_tops", 2.0)
+        PULLBACK_PRECISION = dyn_config.get("pullback_precision_atr", 0.5)
         
         # Hard Gate: Require actual trend strength to reduce noise
         if pd.isna(adx) or adx < 25.0:
@@ -59,8 +70,8 @@ class TrendStrategy(IStrategy):
         atr = context.atr_value if hasattr(context, 'atr_value') and context.atr_value > 0 else 0.0001
         distance_ratio = price_distance / atr
         
-        # 1. Physics Rule: Rubber Band Effect. If we are > 2 ATRs from the mean, we DO NOT enter. Top is too risky.
-        if distance_ratio > 2.0: 
+        # 1. Physics Rule: Rubber Band Effect. If we are > X ATRs from the mean, we DO NOT enter. Top is too risky.
+        if distance_ratio > MAX_ATR_DIST: 
              return StrategyCandidate(
                 symbol=context.symbol,
                 strategy_name=self.name,
@@ -70,11 +81,12 @@ class TrendStrategy(IStrategy):
         
         # 2. Pullback Discovery: Price must have retraced to the Mean (SMA) to reload ammunition.
         # Buy: price > sma, but the lowest point of the period touched or got very close to the SMA.
-        is_pullback_buy = current_price > sma_20 and abs(current_low - sma_20) / atr < 0.5
+        is_pullback_buy = current_price > sma_20 and abs(current_low - sma_20) / atr < PULLBACK_PRECISION
         
         # Sell: price < sma, but the highest point of the period touched or got very close to the SMA.
-        is_pullback_sell = current_price < sma_20 and abs(current_high - sma_20) / atr < 0.5
+        is_pullback_sell = current_price < sma_20 and abs(current_high - sma_20) / atr < PULLBACK_PRECISION
         
+        reason = "OK" # Initialize reason here, after potential early exits
         if is_pullback_buy:
              side = AnalysisSide.BUY
              score_signal = base_score + 15.0 # Premium for sniper entry

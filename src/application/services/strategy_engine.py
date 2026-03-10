@@ -95,10 +95,13 @@ class StrategyEngine:
         
         for strategy in self.strategies:
             try:
-                # Dynamic Config Check
+                # Dynamic Config Check & Injection
                 cfg = strategy_config_service.get_strategy_config(strategy.name)
                 if not cfg or not cfg.enabled:
                     continue
+                    
+                # Inject parameters specific to this strategy
+                context.strategy_configs[strategy.name] = cfg.parameters
 
                 candidate = await strategy.analyze(context)
                 

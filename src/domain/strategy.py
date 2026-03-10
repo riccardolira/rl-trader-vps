@@ -74,6 +74,7 @@ class MarketContext(BaseModel):
     indicators: Dict[str, float] = {}  # e.g., {'sma_20': 1.1234, 'rsi_14': 45.6}
     mtf_trend: AnalysisSide = AnalysisSide.NEUTRAL # D1 Trend Confirmation
     metadata: Dict[str, Any] = {}
+    strategy_configs: Dict[str, Any] = {} # Phase 5: Dynamic tuning parameters injected by Engine
     # Can allow raw data access if needed, but preferred pre-calculated
 
 # --- Protocol Definition ---
