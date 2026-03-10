@@ -180,52 +180,39 @@ export const CriteriaEditor: React.FC<Props> = ({ config, snapshot, onSaved }) =
                 </div>
             </section>
 
-            {/* Classes Toggles */}
+            {/* Class Weights & Toggles */}
             <section>
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                     <Shield className="text-primary" size={20} />
-                    Universe Classes
-                    <TooltipIcon text="Habilita ou desabilita o motor de rodar os critérios, buscar dados e processar a classe. Classes desativadas fecham as posições abertas caso o motor esteja rodando." />
+                    Class Configuration & Routing
+                    <TooltipIcon text="Habilita/desabilita as classes e ajusta os pesos (multiplicadores) de cada um dos critérios. Classes desativadas não processarão sinais novos e liquidarão posições abertas em AUTO." />
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {localConfig.classes_enabled && Object.entries(localConfig.classes_enabled).map(([cls, enabled]) => {
-                        const count = snapshot?.class_counts?.[cls] ?? 0;
-                        return (
-                            <div key={cls} className={`p-3 rounded-lg border flex flex-col justify-between gap-3 ${enabled ? 'bg-card border-border' : 'bg-muted/30 border-muted opacity-80'}`}>
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className="font-mono font-bold text-sm tracking-tighter">{cls}</span>
-                                    {count > 0 && (
-                                        <span className="bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded font-bold">
-                                            {count}
-                                        </span>
-                                    )}
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => toggleClass(cls, !enabled)}
-                                    className={`w-10 h-6 rounded-full transition-colors relative ${enabled ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
-                                >
-                                    <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-4' : ''}`} />
-                                </button>
-                            </div>
-                        );
-                    })}
-                </div>
-            </section>
-
-            {/* Class Weights */}
-            <section>
-                <h3 className="text-lg font-bold mb-4">Class Score Multipliers & Thresholds</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {['FOREX', 'METALS', 'CRYPTO', 'INDICES_NY', 'INDICES_B3', 'INDICES_EU', 'STOCKS_US', 'STOCKS_BR', 'STOCKS_EU', 'COMMODITIES_AGRI', 'COMMODITIES_ENERGY'].map(cls => {
                         const w = localConfig.weights[cls] || {
                             w_liquidity: 1, w_volatility: 1, w_cost: 1, w_stability: 1, max_spread_atr_ratio: 0.1
                         };
+                        const isEnabled = localConfig.classes_enabled ? localConfig.classes_enabled[cls] : false;
+                        const count = snapshot?.class_counts?.[cls] ?? 0;
 
                         return (
-                            <div key={cls} className="bg-card border border-border p-4 rounded-lg flex flex-col gap-4">
-                                <div className="flex items-center justify-between border-b border-border pb-2">
-                                    <h4 className="font-mono text-sm font-bold text-primary">{cls}</h4>
+                            <div key={cls} className={`bg-card border p-4 rounded-lg flex flex-col gap-4 transition-all ${isEnabled ? 'border-border' : 'border-muted/50 opacity-60 bg-muted/20'}`}>
+                                <div className="flex items-center justify-between border-b border-border pb-3">
+                                    <div className="flex items-center gap-3">
+                                        <h4 className="font-mono text-sm font-bold text-primary">{cls}</h4>
+                                        {count > 0 && (
+                                            <span className="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded font-bold">
+                                                {count} ativos
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleClass(cls, !isEnabled)}
+                                        className={`w-10 h-6 rounded-full transition-colors relative ${isEnabled ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
+                                    >
+                                        <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-4' : ''}`} />
+                                    </button>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
