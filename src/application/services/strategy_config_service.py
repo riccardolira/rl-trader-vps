@@ -18,7 +18,7 @@ class ControlHeader(BaseModel):
     max_drift_pct: float = 20.0
 
 class StrategyConfig(BaseModel):
-    _ai_control_header: ControlHeader = Field(default_factory=ControlHeader, alias="_ai_control_header")
+    ai_control_header: ControlHeader = Field(default_factory=ControlHeader, alias="_ai_control_header")
     strategies: Dict[str, StrategyConfigItem]
 
 class StrategyConfigService:
