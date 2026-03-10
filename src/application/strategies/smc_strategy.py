@@ -59,24 +59,46 @@ class SMCStrategy(IStrategy):
             valid_fvgs = [fvg for fvg in fvgs if fvg['type'] == 'BEARISH']
             
         # Check if current bar's high/low touches (mitigates) a valid FVG
+        cur_open = opens.iloc[-1]
+        cur_close = closes.iloc[-1]
         current_low = lows.iloc[-1]
         current_high = highs.iloc[-1]
         
+        # 2.5 Anatomy of the Candle (Price Action Filter)
+        candle_range = current_high - current_low
+        if candle_range > 0:
+             lower_wick_size = min(cur_open, cur_close) - current_low
+             upper_wick_size = current_high - max(cur_open, cur_close)
+             lower_wick_pct = lower_wick_size / candle_range
+             upper_wick_pct = upper_wick_size / candle_range
+        else:
+             lower_wick_pct = 0.0
+             upper_wick_pct = 0.0
+        
         for fvg in valid_fvgs:
             if fvg['type'] == 'BULLISH':
-                # Bullish FVG needs price to dip into it. We check if the Low pierced top.
+                # Bullish FVG needs price to dip into it. AND we need to see the buyers defending it (Lower Wick Rejection)
                 if current_low <= fvg['top'] and current_high >= fvg['bottom']:
-                    side = AnalysisSide.BUY
-                    score_signal = 85.0 # Strong institutional signal
-                    reason = "FVG_MITIGATION_BULL"
-                    break
+                    if lower_wick_pct >= 0.40: # At least 40% of the candle is a bottom tail
+                        side = AnalysisSide.BUY
+                        score_signal = 90.0 # Confirmed Mitigation with Rejection
+                        reason = "FVG_MITIGATION_BULL_REJECTION"
+                        break
+                    else:
+                        # Price sliced into FVG without any defense. Falling knife.
+                        return StrategyCandidate(symbol=context.symbol, strategy_name=self.name, side=AnalysisSide.NEUTRAL, reason_code="FVG_TOUCH_NO_DEFENSE_BULL")
+                        
             elif fvg['type'] == 'BEARISH':
-                # Bearish FVG needs price to spike up into it. We check if the High pierced bottom.
+                # Bearish FVG needs price to spike up into it AND sellers smashing it down (Upper Wick Rejection)
                 if current_high >= fvg['bottom'] and current_low <= fvg['top']:
-                    side = AnalysisSide.SELL
-                    score_signal = 85.0
-                    reason = "FVG_MITIGATION_BEAR"
-                    break
+                    if upper_wick_pct >= 0.40:
+                        side = AnalysisSide.SELL
+                        score_signal = 90.0
+                        reason = "FVG_MITIGATION_BEAR_REJECTION"
+                        break
+                    else:
+                        # Price rocketed into FVG without selling pressure.
+                        return StrategyCandidate(symbol=context.symbol, strategy_name=self.name, side=AnalysisSide.NEUTRAL, reason_code="FVG_TOUCH_NO_DEFENSE_BEAR")
                     
         # 3. Regime Fit (Macro Alignment)
         score_regime_fit = 0.0

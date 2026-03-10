@@ -32,8 +32,9 @@ class OrderFlowStrategy(IStrategy):
         score_signal = 0.0
         reason = "OK"
         
-        # 1. Mathematical Trigger: Volume Infiltration (2.5x the average)
-        if vol_spike_ratio < 2.5:
+        # 1. Mathematical Trigger: Volume Infiltration (1.5x the average)
+        # Instead of 2.5x which only happens on NFP, 1.5x indicates heavy institutional stepping.
+        if vol_spike_ratio < 1.5:
              # Regular market noise, ignore.
              return StrategyCandidate(
                 symbol=context.symbol,
@@ -117,10 +118,10 @@ class OrderFlowStrategy(IStrategy):
              if news_threat:
                   score_regime_fit = 80.0 # News-driven breakout out of range
              else:
-                  score_regime_fit = 0.0
+                  score_regime_fit = 30.0 # Softened from 0.0. 
                   reason = "RANGE_NO_NEWS_TRAP"
-                  # Penalty to drop the final score below threshold
-                  score_signal -= 50.0
+                  # Softened penalty so it doesn't automatically block if signal is 90
+                  score_signal -= 20.0 
 
         # 4. Microstructure Penalty (Spread Limit for Scalping)
         penalty_micro = 0.0

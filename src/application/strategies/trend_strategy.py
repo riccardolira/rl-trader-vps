@@ -47,32 +47,48 @@ class TrendStrategy(IStrategy):
         # Dynamic Scaling based on ADX (from 25 up to ~50+)
         base_score = 60.0 + min((adx - 25.0) * 1.5, 30.0) # Caps around 90 base score
             
-        # We need to ensure we don't buy the top.
-        # Check distance to SMA20 to reward pullbacks and penalize over-extensions.
+        # Extract OHLC for precise price action measurement
+        lows = context.metadata.get('lows', [])
+        highs = context.metadata.get('highs', [])
+        current_low = lows[-1] if len(lows) > 0 else current_price
+        current_high = highs[-1] if len(highs) > 0 else current_price
+
+        # We need to ensure we don't buy the top (Exhaustion Filter).
+        # Check distance to SMA20 using Z-Score approximation (Distance / ATR).
         price_distance = abs(current_price - sma_20)
         atr = context.atr_value if hasattr(context, 'atr_value') and context.atr_value > 0 else 0.0001
         distance_ratio = price_distance / atr
         
-        if distance_ratio > 3.0: # Penalize extreme extensions (3 ATRs)
-            base_score -= 20.0 
-        elif distance_ratio < 1.0: # Reward for pullbacks
-             base_score += 10.0 
+        # 1. Physics Rule: Rubber Band Effect. If we are > 2 ATRs from the mean, we DO NOT enter. Top is too risky.
+        if distance_ratio > 2.0: 
+             return StrategyCandidate(
+                symbol=context.symbol,
+                strategy_name=self.name,
+                side=AnalysisSide.NEUTRAL,
+                reason_code="EXHAUSTED_TREND_ELASTIC_BAND"
+            )
         
-        # If Price > SMA20 => Uptrend (Buy)
-        if current_price > sma_20:
-             # RSI Pullback Validation: Don't buy if heavily overbought
-             if rsi > 70.0:
-                 base_score -= 30.0
+        # 2. Pullback Discovery: Price must have retraced to the Mean (SMA) to reload ammunition.
+        # Buy: price > sma, but the lowest point of the period touched or got very close to the SMA.
+        is_pullback_buy = current_price > sma_20 and abs(current_low - sma_20) / atr < 0.5
+        
+        # Sell: price < sma, but the highest point of the period touched or got very close to the SMA.
+        is_pullback_sell = current_price < sma_20 and abs(current_high - sma_20) / atr < 0.5
+        
+        if is_pullback_buy:
              side = AnalysisSide.BUY
-             score_signal = base_score
-        elif current_price < sma_20:
-             # RSI Pullback Validation: Don't sell if heavily oversold
-             if rsi < 30.0:
-                 base_score -= 30.0
+             score_signal = base_score + 15.0 # Premium for sniper entry
+        elif is_pullback_sell:
              side = AnalysisSide.SELL
-             score_signal = base_score
+             score_signal = base_score + 15.0 # Premium for sniper entry
         else:
-             score_signal = 0.0
+             # Missing a pullback. It's just riding a wave.
+             return StrategyCandidate(
+                 symbol=context.symbol,
+                 strategy_name=self.name,
+                 side=AnalysisSide.NEUTRAL,
+                 reason_code="WAITING_FOR_PULLBACK"
+             )
 
         # 2. Regime Fit Calculation
         score_regime_fit = 0.0

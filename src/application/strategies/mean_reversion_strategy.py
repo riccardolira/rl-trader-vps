@@ -40,22 +40,44 @@ class MeanReversionStrategy(IStrategy):
                 symbol=context.symbol,
                 strategy_name=self.name,
                 side=AnalysisSide.NEUTRAL,
-                reason_code="VOLATILITY_SQUEEZE"
+                reason_code="VOLATILITY_SQUEEZE_WARNING"
             )
 
-        # 1. Signal Logic: Extreme RSI + BB
-        if rsi_14 < 25 and current_price <= bb_lower:
+        # 1. Signal Logic: Historical Extremes (Percentiles)
+        # Instead of static RSI < 25, we compute if current RSI is in the bottom 5% of its own 100-bar history.
+        closes = pd.Series(context.metadata.get('closes', []))
+        if len(closes) < 50:
+             return StrategyCandidate(symbol=context.symbol, strategy_name=self.name, side=AnalysisSide.NEUTRAL, reason_code="INSUFFICIENT_HISTORY_FOR_PERCENTILES")
+             
+        # Calculate recent RSI manually without importing heavy libraries if possible, or using pandas
+        delta = closes.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi_history = 100 - (100 / (1 + rs))
+        recent_rsis = rsi_history.iloc[-100:].dropna()
+        
+        if len(recent_rsis) == 0:
+             return StrategyCandidate(symbol=context.symbol, strategy_name=self.name, side=AnalysisSide.NEUTRAL, reason_code="RSI_HISTORY_FAIL")
+             
+        # Calculate Percentile (0.0 to 100.0)
+        rsi_percentile = (recent_rsis < rsi_14).mean() * 100.0
+        
+        # A true oversold is in the bottom 10% of History, not just arbitrarily < 25.
+        is_dynamic_oversold = rsi_percentile < 10.0 and current_price <= bb_lower
+        is_dynamic_overbought = rsi_percentile > 90.0 and current_price >= bb_upper
+
+        if is_dynamic_oversold:
              side = AnalysisSide.BUY
-             # Lower RSI = Stronger Signal
-             score_signal = 80.0 + (25 - rsi_14) * 1.5 
+             # Stronger signal closer to 0 percentile
+             score_signal = 80.0 + (10.0 - rsi_percentile) * 2.0 
              score_signal = min(score_signal, 100.0)
-        elif rsi_14 > 75 and current_price >= bb_upper:
+        elif is_dynamic_overbought:
              side = AnalysisSide.SELL
-             # Higher RSI = Stronger Signal
-             score_signal = 80.0 + (rsi_14 - 75) * 1.5
+             score_signal = 80.0 + (rsi_percentile - 90.0) * 2.0
              score_signal = min(score_signal, 100.0)
         else:
-             score_signal = 0.0 # No signal in neutral zone
+             score_signal = 0.0 # No mathematical extreme
 
         # 2. Regime Fit Calculation
         score_regime_fit = 0.0

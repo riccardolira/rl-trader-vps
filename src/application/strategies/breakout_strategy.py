@@ -32,13 +32,18 @@ class BreakoutStrategy(IStrategy):
         reason = "OK"
         
         # 1. Squeeze Condition (Context)
-        # Relaxed from 20.0 to 30.0 to catch early explosions and not demand absolute dead perfection
+        # Squeeze percentile must indicate compression (e.g. bottom 30%)
         is_squeeze = squeeze_pct < 30.0
         
-        # 2. Breakout Trigger
-        # Close OUTSIDE Bands
-        is_break_up = current_price > bb_upper
-        is_break_down = current_price < bb_lower
+        # 2. Institutional Volume Check
+        # Breakouts are fake unless volume is higher than the moving average (VMA_20)
+        vol_spike_ratio = context.indicators.get('vol_spike_ratio', 1.0)
+        is_volume_backed = vol_spike_ratio > 1.25 # Require 25% more volume than average
+        
+        # 3. Breakout Trigger
+        # Close OUTSIDE Bands AND Accompanied by true Volume
+        is_break_up = current_price > bb_upper and is_volume_backed
+        is_break_down = current_price < bb_lower and is_volume_backed
         
         if is_break_up:
             side = AnalysisSide.BUY
@@ -46,6 +51,13 @@ class BreakoutStrategy(IStrategy):
         elif is_break_down:
             side = AnalysisSide.SELL
             score_signal = 80.0
+        elif (current_price > bb_upper or current_price < bb_lower) and not is_volume_backed:
+            return StrategyCandidate(
+                symbol=context.symbol,
+                strategy_name=self.name,
+                side=AnalysisSide.NEUTRAL,
+                reason_code="FAKEOUT_NO_VOLUME"
+            )
         
         # Boost signal if it comes from a Squeeze (The Explosion)
         if side != AnalysisSide.NEUTRAL and is_squeeze:
