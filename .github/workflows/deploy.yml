@@ -38,9 +38,9 @@ jobs:
         username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         local-dir: ./frontend/dist/
-        server-dir: ./public_html/
+        server-dir: ./
         dangerous-clean-slate: false
-        state-name: ''
+        state-name: '.deploy-state-v4.json'
         exclude: |
           **/.git*
           **/.git*/**
