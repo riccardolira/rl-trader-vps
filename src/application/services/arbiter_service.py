@@ -74,8 +74,17 @@ class ArbiterService:
         self._pending_drafts[signal.symbol].append(now)
 
         # 1. Score Filter
-        if signal.score < self.min_score:
-            log.debug(f"Signal ignored: Score {signal.score} < {self.min_score}")
+        asset_class_str = get_asset_class(signal.symbol)
+        profile = guardian_service.config.profiles.get(asset_class_str.value)
+        
+        # Determine dynamic min score
+        dynamic_min_score = self.min_score
+        if profile and profile.min_score_to_trade > 0:
+            dynamic_min_score = profile.min_score_to_trade
+            log.debug(f"Arbiter: Using Dynamic Min Score {dynamic_min_score} for {asset_class_str.value}")
+
+        if signal.score < dynamic_min_score:
+            log.debug(f"Signal ignored: Score {signal.score} < {dynamic_min_score}")
             # Remove from pending since it was rejected
             if self._pending_drafts[signal.symbol]:
                 self._pending_drafts[signal.symbol].pop()

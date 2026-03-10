@@ -16,6 +16,13 @@ class GuardianService:
         self.config_path = "risk_config.json"
         self.config = self._load_config()
         self._pending_orders = [] # list of floats (timestamps)
+        self._check_credentials()
+
+    def _check_credentials(self):
+        """Warn if using default dev credentials."""
+        from src.infrastructure.config import settings
+        if settings.MT5_LOGIN == 12345 or settings.MT5_LOGIN == 0:
+             log.warning("!!! GUARDIAN WARNING: MT5 Login is set to DEFAULT/NULL. MT5 will fail to authorize. !!!")
 
     def _load_config(self) -> RiskConfig:
         config = RiskConfig()

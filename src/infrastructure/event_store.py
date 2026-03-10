@@ -19,19 +19,15 @@ class EventStore(IPersistence):
             
             payload_str = json.dumps(event.payload, default=str)
             
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                async with db.cursor() as cursor:
-                    await cursor.execute(sql.replace('?', '%s'), (
-                        event.event_id,
-                        event.timestamp,
-                        event.type,
-                        event.component,
-                        event.severity,
-                        event.correlation_id,
-                        payload_str
-                    ))
-                await db.commit()
+            await db_pool.execute(sql, (
+                event.event_id,
+                event.timestamp,
+                event.type,
+                event.component,
+                event.severity,
+                event.correlation_id,
+                payload_str
+            ))
                 
         except Exception as e:
             log.error(f"Failed to persist event {event}: {e}")
@@ -40,12 +36,9 @@ class EventStore(IPersistence):
         """Retrieve trades with OPEN status."""
         trades = []
         try:
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute("SELECT * FROM trades WHERE status = 'OPEN'")
-                    async for row in cursor:
-                        trades.append(self._row_to_trade(row))
+            rows = await db_pool.execute("SELECT * FROM trades WHERE status = 'OPEN'", fetch="all", dictionary=True)
+            for row in rows:
+                trades.append(self._row_to_trade(row))
         except Exception as e:
             log.error(f"Failed to fetch active trades: {e}")
         return trades
@@ -54,13 +47,10 @@ class EventStore(IPersistence):
         """Retrieve trades with CLOSED status, ordered by most recent first."""
         trades = []
         try:
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                query = "SELECT * FROM trades WHERE status = 'CLOSED' ORDER BY close_time DESC LIMIT %s"
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(query, (limit,))
-                    async for row in cursor:
-                        trades.append(self._row_to_trade(row))
+            query = "SELECT * FROM trades WHERE status = 'CLOSED' ORDER BY close_time DESC LIMIT %s"
+            rows = await db_pool.execute(query, (limit,), fetch="all", dictionary=True)
+            for row in rows:
+                trades.append(self._row_to_trade(row))
         except Exception as e:
             log.error(f"Failed to fetch closed trades: {e}")
         return trades
@@ -68,17 +58,17 @@ class EventStore(IPersistence):
     async def get_todays_realized_pnl(self) -> float:
         """Calculate the sum of profit for trades closed today."""
         try:
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                # Assuming timezone is handled or UTC is used consistently
+            # Note: CURDATE() is MySQL. SQLite needs DATE('now'). handled in connection.py or here.
+            # Let's use a more portable approach if possible, or handle in connection.py
+            if db_pool.is_mysql:
                 query = "SELECT COALESCE(SUM(profit), 0) as total FROM trades WHERE status = 'CLOSED' AND DATE(close_time) = CURDATE()"
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(query)
-                    row = await cursor.fetchone()
-                    if row and 'total' in row:
-                        return float(row['total'])
+            else:
+                query = "SELECT COALESCE(SUM(profit), 0) as total FROM trades WHERE status = 'CLOSED' AND DATE(close_time) = DATE('now')"
+            
+            row = await db_pool.execute(query, fetch="one", dictionary=True)
+            if row and 'total' in row:
+                return float(row['total'])
         except Exception as e:
-            from src.infrastructure.logger import log
             log.error(f"EventStore: Failed to calculate daily PnL: {e}")
         return 0.0
 
@@ -88,9 +78,9 @@ class EventStore(IPersistence):
             sql = """
                 INSERT INTO trades (
                     ticket, symbol, side, volume, open_price, open_time, 
-                    tp, close_price, close_time, profit, status, magic, comment, strategy_name, market_context
+                    sl, tp, close_price, close_time, profit, status, magic, comment, strategy_name, market_context
                 ) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     close_price=VALUES(close_price),
                     close_time=VALUES(close_time),
@@ -100,29 +90,25 @@ class EventStore(IPersistence):
                     market_context=VALUES(market_context)
             """
             
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                async with db.cursor() as cursor:
-                    await cursor.execute(sql, (
-                    trade.ticket,
-                    trade.symbol,
-                    trade.side,
-                    trade.volume,
-                    trade.open_price,
-                    trade.open_time,
-                    trade.sl,
-                    trade.tp,
-                    trade.close_price,
-                    trade.close_time,
-                    trade.profit,
-                    trade.status,
-                    trade.magic,
-                    trade.comment,
-                    trade.strategy_name,
-                    json.dumps(trade.market_context) if trade.market_context else None
-                ))
-                await db.commit()
-                log.debug(f"Upserted trade {trade.ticket}")
+            await db_pool.execute(sql, (
+                trade.ticket,
+                trade.symbol,
+                trade.side,
+                trade.volume,
+                trade.open_price,
+                trade.open_time,
+                trade.sl,
+                trade.tp,
+                trade.close_price,
+                trade.close_time,
+                trade.profit,
+                trade.status,
+                trade.magic,
+                trade.comment,
+                trade.strategy_name,
+                json.dumps(trade.market_context) if trade.market_context else None
+            ))
+            log.debug(f"Upserted trade {trade.ticket}")
                 
         except Exception as e:
             log.error(f"Failed to upsert trade {trade.ticket}: {e}")
@@ -134,14 +120,20 @@ class EventStore(IPersistence):
         magic = row["magic"]
         strategy_name = get_strategy_for_magic(magic) if magic else "Unknown"
         
+        # Handling row access for both DictCursor and aiosqlite.Row
+        try:
+            row_keys = row.keys() if hasattr(row, "keys") else []
+        except:
+            row_keys = []
+
         # Fallback to DB string if Magic is unsupported or returns Unknown
         if strategy_name == "Unknown":
-            if "strategy_name" in row.keys() and row["strategy_name"]:
+            if "strategy_name" in row_keys and row["strategy_name"]:
                 if row["strategy_name"] != "Unknown":
                     strategy_name = row["strategy_name"]
             
         market_ctx = {}
-        if "market_context" in row.keys() and row["market_context"]:
+        if "market_context" in row_keys and row["market_context"]:
             try:
                 market_ctx = json.loads(row["market_context"])
             except:
@@ -153,7 +145,7 @@ class EventStore(IPersistence):
             side=row["side"],
             volume=row["volume"],
             open_price=row["open_price"],
-            open_time=row["open_time"], # Needs datetime parsing if string
+            open_time=row["open_time"], 
             sl=row["sl"],
             tp=row["tp"],
             close_price=row["close_price"],
@@ -161,7 +153,7 @@ class EventStore(IPersistence):
             profit=row["profit"],
             status=row["status"],
             magic=magic,
-            comment=row["comment"] if "comment" in row.keys() else "",
+            comment=row["comment"] if "comment" in row_keys else "",
             strategy_name=strategy_name,
             market_context=market_ctx
         )
@@ -169,18 +161,11 @@ class EventStore(IPersistence):
     async def delete_closed_trade(self, ticket: int) -> bool:
         """Deletes a specific trade from the database by ticket ID."""
         try:
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                async with db.cursor() as cursor:
-                    await cursor.execute("DELETE FROM trades WHERE ticket = %s", (ticket,))
-                    deleted = cursor.rowcount > 0
-                await db.commit()
-                return deleted
+            count = await db_pool.execute("DELETE FROM trades WHERE ticket = %s", (ticket,))
+            return count > 0
         except Exception as e:
-            from src.infrastructure.logger import log
             log.error(f"EventStore: Failed to delete trade {ticket} - {e}")
             return False
-
 
     async def init_tables(self):
         """Initialize database tables if they don't exist."""
@@ -201,7 +186,7 @@ class EventStore(IPersistence):
                 magic BIGINT,
                 comment TEXT,
                 strategy_name VARCHAR(100),
-                market_context JSON
+                market_context TEXT
             );
         """
         sql_audit = """
@@ -212,16 +197,14 @@ class EventStore(IPersistence):
                 component VARCHAR(50),
                 severity VARCHAR(20),
                 correlation_id VARCHAR(255),
-                payload_json JSON
+                payload_json TEXT
             );
         """
+        # Note: SQLite doesn't have JSON type, using TEXT as fallback.
+        # MySQL 5.7+ has JSON, but TEXT works for both.
         try:
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                async with db.cursor() as cursor:
-                    await cursor.execute(sql_trades)
-                    await cursor.execute(sql_audit)
-                await db.commit()
+            await db_pool.execute(sql_trades)
+            await db_pool.execute(sql_audit)
             log.info("Database tables initialized.")
         except Exception as e:
             log.error(f"Failed to initialize DB tables: {e}")
