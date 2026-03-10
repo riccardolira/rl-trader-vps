@@ -1,8 +1,17 @@
-﻿import React, { useState } from 'react';
-import { Ban, Activity } from 'lucide-react';
+﻿import React, { useState, useEffect } from 'react';
+import { Ban, Activity, HelpCircle, Save, Loader2 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { UniverseConfig } from '../../services/api';
 import { CorrelationHeatmap } from './CorrelationHeatmap';
+
+const TooltipIcon = ({ text }: { text: string }) => (
+    <div className="group relative inline-block ml-1">
+        <HelpCircle size={14} className="text-muted-foreground hover:text-foreground cursor-help" />
+        <div className="hidden group-hover:block absolute z-50 w-64 p-2 mt-1 text-xs bg-popover text-popover-foreground border border-border rounded shadow-lg pointer-events-none">
+            {text}
+        </div>
+    </div>
+);
 
 interface ViewProps {
     config?: UniverseConfig | null;
@@ -11,8 +20,36 @@ interface ViewProps {
 
 export const ScannerFiltersView: React.FC<ViewProps> = ({ config, onConfigUpdate }) => {
     const [newBlocked, setNewBlocked] = useState('');
+    const [localConfig, setLocalConfig] = useState<UniverseConfig | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
 
-    if (!config) return null;
+    useEffect(() => {
+        if (config && (!localConfig || !isDirty)) {
+            setLocalConfig(JSON.parse(JSON.stringify(config)));
+            setIsDirty(false);
+        }
+    }, [config]);
+
+    if (!config || !localConfig) return <div className="p-4">Carregando configurações...</div>;
+
+    const handleGlobalChange = (key: keyof UniverseConfig, value: any) => {
+        setLocalConfig({ ...localConfig, [key]: value });
+        setIsDirty(true);
+    };
+
+    const saveChanges = async () => {
+        setIsSaving(true);
+        try {
+            await api.post('/api/universe/config/update', localConfig);
+            setIsDirty(false);
+            onConfigUpdate();
+        } catch (e) {
+            console.error("Falha ao salvar", e);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const addBlock = async () => {
         if (!newBlocked) return;
@@ -76,15 +113,65 @@ export const ScannerFiltersView: React.FC<ViewProps> = ({ config, onConfigUpdate
                     </div>
                 </div>
 
-                {/* Additional Info / Future Filters Room */}
-                <div className="space-y-4 bg-card border border-border p-4 rounded-lg">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <Activity className="text-primary" size={20} />
-                        Anti-Cloner Engine
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        O Anti-Cloner impede que ativos com alta correlação ocupem vagas duplicadas no <i>Active Set</i>. Suas configurações e <i>Thresholds</i> podem ser ajustadas na aba <strong>Critérios (Global Rules)</strong>. Abaixo está a visão em tempo real das correlações (Heatmap).
-                    </p>
+                {/* Anti-Correlation Shield */}
+                <div className="space-y-4 bg-card border border-border p-4 rounded-lg flex flex-col justify-between">
+                    <div>
+                        <h3 className="font-semibold text-lg flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <Activity className="text-primary" size={20} />
+                                Anti-Correlation Shield
+                                <TooltipIcon text="Impede a seleção de ativos altamente correlacionados (positiva ou negativamente) para diversificar o risco." />
+                            </div>
+                            <div className="flex items-center h-8">
+                                {(isDirty) && (
+                                    <button
+                                        onClick={saveChanges}
+                                        disabled={isSaving}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-md font-bold text-xs bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                                    >
+                                        {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                        Salvar
+                                    </button>
+                                )}
+                            </div>
+                        </h3>
+
+                        <div className="flex flex-col gap-4 mt-6">
+                            <label className="flex items-center text-sm cursor-pointer font-bold">
+                                <input
+                                    type="checkbox"
+                                    className="mr-2"
+                                    checked={localConfig.correlation_enabled ?? true}
+                                    onChange={e => handleGlobalChange('correlation_enabled', e.target.checked)}
+                                />
+                                Shield Ativado
+                            </label>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Max Threshold</label>
+                                    <input
+                                        type="number" step="0.01" min="0" max="1"
+                                        className="w-full bg-background border border-border p-2 rounded text-sm disabled:opacity-50"
+                                        value={localConfig.max_correlation_threshold ?? 0.85}
+                                        onChange={e => handleGlobalChange('max_correlation_threshold', parseFloat(e.target.value))}
+                                        disabled={!(localConfig.correlation_enabled ?? true)}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Periods (H1)</label>
+                                    <input
+                                        type="number" min="2" max="100"
+                                        className="w-full bg-background border border-border p-2 rounded text-sm disabled:opacity-50"
+                                        value={localConfig.correlation_periods ?? 24}
+                                        onChange={e => handleGlobalChange('correlation_periods', parseInt(e.target.value))}
+                                        disabled={!(localConfig.correlation_enabled ?? true)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

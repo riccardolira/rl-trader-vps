@@ -176,45 +176,7 @@ export const CriteriaEditor: React.FC<Props> = ({ config, snapshot, onSaved }) =
                             onChange={e => handleGlobalChange('hold_buffer', parseInt(e.target.value))}
                         />
                     </div>
-                    <div className="bg-card border border-border p-4 rounded-lg">
-                        <label className="text-sm font-bold flex items-center mb-2">
-                            Anti-Correlation Shield
-                            <TooltipIcon text="Impede a seleção de ativos altamente correlacionados (positiva ou negativamente) para diversificar o risco." />
-                        </label>
-                        <div className="flex flex-col gap-3">
-                            <label className="flex items-center text-sm cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="mr-2"
-                                    checked={localConfig.correlation_enabled ?? true}
-                                    onChange={e => handleGlobalChange('correlation_enabled', e.target.checked)}
-                                />
-                                Shield Ativado
-                            </label>
 
-                            <div>
-                                <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Max Threshold</label>
-                                <input
-                                    type="number" step="0.01" min="0" max="1"
-                                    className="w-full bg-background border border-border p-1.5 rounded text-sm disabled:opacity-50"
-                                    value={localConfig.max_correlation_threshold ?? 0.85}
-                                    onChange={e => handleGlobalChange('max_correlation_threshold', parseFloat(e.target.value))}
-                                    disabled={!(localConfig.correlation_enabled ?? true)}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Periods (H1)</label>
-                                <input
-                                    type="number" min="2" max="100"
-                                    className="w-full bg-background border border-border p-1.5 rounded text-sm disabled:opacity-50"
-                                    value={localConfig.correlation_periods ?? 24}
-                                    onChange={e => handleGlobalChange('correlation_periods', parseInt(e.target.value))}
-                                    disabled={!(localConfig.correlation_enabled ?? true)}
-                                />
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </section>
 
