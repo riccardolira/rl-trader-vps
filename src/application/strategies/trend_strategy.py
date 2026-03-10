@@ -14,15 +14,7 @@ class TrendStrategy(IStrategy):
         return "TrendFollowing"
 
     async def analyze(self, context: MarketContext) -> StrategyCandidate:
-        sma_20 = context.indicators.get('sma_20')
-        
         import pandas as pd
-        # Guard Clause: Missing Data or NaN
-        if sma_20 is None or pd.isna(sma_20):
-            return StrategyCandidate(
-                symbol=context.symbol,
-                strategy_name=self.name,
-                side=AnalysisSide.NEUTRAL,
         
         current_price = context.price_close
         side = AnalysisSide.NEUTRAL
