@@ -43,6 +43,7 @@ jobs:
         FTP_HOST: ${{ secrets.HOSTINGER_FTP_SERVER }}
       run: |
         lftp -c "
+          set cmd:fail-exit true
           set net:timeout 15
           set net:max-retries 3
           set ftp:passive-mode true
@@ -52,6 +53,8 @@ jobs:
           set ssl:verify-certificate no
           set ssl:check-hostname no
           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
+          pwd
+          ls -la
+          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
           quit
         "
