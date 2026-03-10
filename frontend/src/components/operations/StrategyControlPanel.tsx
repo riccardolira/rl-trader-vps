@@ -8,6 +8,7 @@ export interface StrategyConfigItem {
     enabled: boolean;
     weight_multiplier: number;
     min_score_threshold: number;
+    parameters?: Record<string, any>;
 }
 
 export const StrategyControlPanel: React.FC = () => {
@@ -169,7 +170,7 @@ export const StrategyControlPanel: React.FC = () => {
                             </div>
 
                             {/* Weight Multiplier Input */}
-                            <div className="flex items-center justify-between border-t border-border/40 pt-2">
+                            <div className="flex items-center justify-between border-t border-border/40 pt-2 pb-1">
                                 <span className="text-xs text-muted-foreground font-semibold">Peso no Desempate (x1.0)</span>
                                 <div className="flex items-center gap-2">
                                     <button
@@ -187,6 +188,49 @@ export const StrategyControlPanel: React.FC = () => {
                                     >+</button>
                                 </div>
                             </div>
+
+                            {/* Dynamic AI / Physics Parameters (Phase 5/6) */}
+                            {strat.parameters && Object.keys(strat.parameters).length > 0 && (
+                                <div className="mt-2 border-t border-border/40 pt-3 space-y-2">
+                                    <h5 className="text-[11px] font-bold text-muted-foreground/80 uppercase tracking-wider mb-2">
+                                        Calibragem Física (IA Ready)
+                                    </h5>
+                                    {Object.entries(strat.parameters).map(([key, value]) => {
+                                        if (key.startsWith('_description_')) {
+                                            return (
+                                                <div key={key} className="text-[10px] text-muted-foreground bg-muted/40 p-2.5 rounded border border-border/50 leading-relaxed font-mono mb-2">
+                                                    {value}
+                                                </div>
+                                            );
+                                        }
+                                        if (typeof value === 'number') {
+                                            return (
+                                                <div key={key} className="flex justify-between items-center bg-background border border-border/50 shadow-sm rounded-lg px-3 py-2">
+                                                    <span className="text-[11px] font-mono font-medium text-foreground/80 flex-1 truncate pr-2">{key.replace(/_/g, ' ')}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="number"
+                                                            step={value % 1 !== 0 || value < 5 ? "0.01" : "1"}
+                                                            value={value}
+                                                            disabled={!strat.enabled}
+                                                            onChange={(e) => {
+                                                                const val = parseFloat(e.target.value);
+                                                                if (!isNaN(val)) {
+                                                                    updateStrategy(strat.name, {
+                                                                        parameters: { ...strat.parameters, [key]: val }
+                                                                    });
+                                                                }
+                                                            }}
+                                                            className="w-16 bg-transparent text-right text-xs font-mono font-bold text-primary focus:outline-none border-b border-primary/20 focus:border-primary transition-colors pb-0.5 disabled:opacity-50"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+                                </div>
+                            )}
                         </div>
 
                     </div>
