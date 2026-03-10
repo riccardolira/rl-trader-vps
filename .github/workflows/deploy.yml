@@ -52,6 +52,6 @@ jobs:
           set ssl:verify-certificate no
           set ssl:check-hostname no
           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
+          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
           quit
         "
