@@ -33,17 +33,19 @@ jobs:
         npm run build
         echo "<!-- Deploy $(date +%s) -->" >> dist/index.html
       
-    - name: 🚀 Sync files via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-        username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-        password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-        local-dir: ./frontend/dist/
-        server-dir: ./
-        dangerous-clean-slate: false
-        state-name: '.deploy-state-v4.json'
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
+    - name: 🚀 Install LFTP
+      run: sudo apt-get update && sudo apt-get install -y lftp
+      
+    - name: 🚀 Sync files via LFTP (Clean Slate)
+      env:
+        FTP_USER: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+        FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+        FTP_HOST: ${{ secrets.HOSTINGER_FTP_SERVER }}
+      run: |
+        lftp -c "
+          set ssl:verify-certificate no
+          set ftp:ssl-allow true
+          open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
+          quit
+        "
