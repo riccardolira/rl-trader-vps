@@ -31,9 +31,12 @@ class Engine:
         shutdown_handler.setup_handlers()
         
         # 2. Database Migrations & Init
-        from src.infrastructure.event_store import event_store
-        await event_store.init_tables()
-        # await Migrator.run()  # SQLite engine is deprecated
+        log.info("Running database migrations (Alembic)...")
+        proc = await asyncio.create_subprocess_shell("alembic upgrade head")
+        await proc.communicate()
+        if proc.returncode != 0:
+            log.critical("Database migrations failed. Aborting boot.")
+            return
         
         # 3. Connectivity & Infra
         if not await mt5_adapter.connect():
@@ -45,6 +48,10 @@ class Engine:
         await disk_guard.start()
         await time_skew_guard.start()
         await heartbeat_service.start()
+        
+        # 4.1 Database Archival Task
+        from src.application.services.archive_service import archive_service
+        await archive_service.start()
 
         # 5. Start Core Services (Passive)
         # await news_service.start() # Handled by news_worker now
@@ -76,6 +83,8 @@ class Engine:
 
     async def shutdown(self):
         log.info("Engine shutting down services...")
+        from src.application.services.archive_service import archive_service
+        await archive_service.stop()
         await strategy_engine.stop()
         await asset_selection_service.stop()
         await mt5_adapter.disconnect()

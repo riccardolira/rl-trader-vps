@@ -15,3 +15,5 @@ loguru
 aiohttp
 aiosqlite
 psutil
+alembic
+sqlalchemy

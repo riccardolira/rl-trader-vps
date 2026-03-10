@@ -1,88 +1,101 @@
-import aiomysql
-import aiosqlite
 import os
 from src.infrastructure.config import settings
 from src.infrastructure.logger import log
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+from sqlalchemy import text
 
 class DatabasePool:
     def __init__(self):
-        self.pool = None
+        self.engine: AsyncEngine = None
+        self.is_mysql = True
 
     async def get_pool(self):
-        if not self.pool:
+        if not self.engine:
             try:
-                self.pool = await aiomysql.create_pool(
-                    host=settings.DB_HOST,
-                    port=settings.DB_PORT,
-                    user=settings.DB_USER,
-                    password=settings.DB_PASSWORD,
-                    db=settings.DB_NAME,
-                    autocommit=True
+                # Use SQLAlchemy AsyncEngine with pool_pre_ping and pool_recycle for ultimate resilience
+                url = f"mysql+aiomysql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+                self.engine = create_async_engine(
+                    url,
+                    pool_pre_ping=True,      # Tests connection before using (Prevents "MySQL server has gone away")
+                    pool_recycle=3600,       # Recycles connections every hour
+                    echo=False
                 )
-                log.info(f"Connected to MySQL on {settings.DB_HOST}:{settings.DB_PORT}")
+                
+                # Test connection
+                async with self.engine.connect() as conn:
+                    pass
+                log.info(f"Connected to MySQL on {settings.DB_HOST}:{settings.DB_PORT} via SQLAlchemy")
                 self.is_mysql = True
             except Exception as e:
                 log.warning(f"Failed to connect to MySQL: {e}. Falling back to SQLite...")
-                self.pool = await aiosqlite.connect("rl_trader_audit.db") # Single connection for SQLite
-                await self.pool.execute("PRAGMA journal_mode=WAL;")
-                await self.pool.execute("PRAGMA synchronous=NORMAL;")
+                url = "sqlite+aiosqlite:///rl_trader_audit.db"
+                self.engine = create_async_engine(
+                    url,
+                    echo=False
+                )
+                async with self.engine.begin() as conn:
+                    await conn.execute(text("PRAGMA journal_mode=WAL;"))
+                    await conn.execute(text("PRAGMA synchronous=NORMAL;"))
                 self.is_mysql = False
-                log.info("Connected to local SQLite database: rl_trader_audit.db (WAL Mode Enabled)")
-        return self.pool
+                log.info("Connected to local SQLite database: rl_trader_audit.db (WAL Mode Enabled) via SQLAlchemy")
+        return self.engine
 
     async def close(self):
-        if self.pool:
-            if self.is_mysql:
-                self.pool.close()
-                await self.pool.wait_closed()
-            else:
-                await self.pool.close()
-            self.pool = None
+        if self.engine:
+            await self.engine.dispose()
+            self.engine = None
 
-    async def execute(self, sql: str, params: tuple = None, fetch: str = None, dictionary: bool = False):
-        """Unified execute for both MySQL and SQLite."""
-        pool = await self.get_pool()
+    async def execute(self, sql_or_stmt, params = None, fetch: str = None, dictionary: bool = False):
+        """Unified execute for both MySQL and SQLite via SQLAlchemy."""
+        engine = await self.get_pool()
         
-        # 1. Prepare SQL Placeholders
-        # Convert ? to %s for MySQL if needed, or vice-versa
-        if self.is_mysql:
-             final_sql = sql.replace('?', '%s')
+        # Backwards compatibility parser for old raw SQL strings using %s or ?
+        if isinstance(sql_or_stmt, str):
+            actual_params = {}
+            if params and isinstance(params, (tuple, list)):
+                target_char = "%s" if "%s" in sql_or_stmt else "?" if "?" in sql_or_stmt else None
+                if target_char:
+                    parts = sql_or_stmt.split(target_char)
+                    new_sql = ""
+                    for i in range(len(parts) - 1):
+                        new_sql += parts[i] + f":p{i}"
+                        actual_params[f"p{i}"] = params[i]
+                    new_sql += parts[-1]
+                    stmt = text(new_sql)
+                else:
+                    stmt = text(sql_or_stmt)
+            else:
+                stmt = text(sql_or_stmt)
+                if isinstance(params, dict):
+                    actual_params = params
         else:
-             final_sql = sql.replace('%s', '?')
-             # SQLite doesn't like INSERT IGNORE
-             if "INSERT IGNORE" in final_sql:
-                 final_sql = final_sql.replace("INSERT IGNORE", "INSERT OR IGNORE")
-             if "ON DUPLICATE KEY UPDATE" in final_sql:
-                 # Very basic conversion for simple upserts (trades)
-                 # Expects: INSERT ... VALUES ... ON DUPLICATE KEY UPDATE col=VALUES(col)
-                 # SQLite: INSERT ... VALUES ... ON CONFLICT(ticket) DO UPDATE SET col=excluded.col
-                 final_sql = final_sql.split("ON DUPLICATE KEY UPDATE")[0]
-                 # For now, let's keep it simple or use OR REPLACE
-                 final_sql = final_sql.replace("INSERT INTO", "INSERT OR REPLACE INTO")
+            stmt = sql_or_stmt
+            if isinstance(params, dict):
+                actual_params = params
+            elif params is None:
+                actual_params = {}
+            else: # list of dictionaries for executemany
+                actual_params = params
 
         try:
-            if self.is_mysql:
-                async with pool.acquire() as db:
-                    cursor_type = aiomysql.DictCursor if dictionary else aiomysql.Cursor
-                    async with db.cursor(cursor_type) as cursor:
-                        await cursor.execute(final_sql, params)
-                        if fetch == "one":
-                            return await cursor.fetchone()
-                        if fetch == "all":
-                            return await cursor.fetchall()
-                        return cursor.rowcount
-            else:
-                # SQLite
-                pool.row_factory = aiosqlite.Row if dictionary else None
-                async with pool.execute(final_sql, params) as cursor:
-                    if fetch == "one":
-                        return await cursor.fetchone()
-                    if fetch == "all":
-                        return await cursor.fetchall()
-                    await pool.commit()
-                    return cursor.rowcount
+            async with engine.begin() as conn:
+                # If executemany (params is a list of dicts)
+                if isinstance(actual_params, list):
+                    result = await conn.execute(stmt, actual_params)
+                else:
+                    result = await conn.execute(stmt, actual_params)
+                
+                if fetch == "one":
+                    row = result.fetchone()
+                    return row._asdict() if (row and dictionary) else row
+                if fetch == "all":
+                    rows = result.fetchall()
+                    return [r._asdict() for r in rows] if dictionary else rows
+                
+                return result.rowcount
         except Exception as e:
-            log.error(f"DatabasePool Error: {e} | SQL: {final_sql[:100]}...")
+            msg = str(sql_or_stmt)[:100] + "..."
+            log.error(f"DatabasePool Error: {e} | SQL: {msg}")
             raise e
 
 db_pool = DatabasePool()
