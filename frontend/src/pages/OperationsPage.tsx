@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
-import { Activity, TrendingUp, TrendingDown, Zap, ShieldCheck, Cpu, AlertTriangle, SlidersHorizontal } from 'lucide-react';
+import { TrendingUp, TrendingDown, Zap, ShieldCheck, Cpu, AlertTriangle, SlidersHorizontal } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { api } from '../services/api';
 import type { EngineState } from '../services/api';
@@ -103,7 +103,7 @@ function getAssetClassBadge(symbol: string, presetClass?: string) {
     return <span className={cn("text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border tracking-widest", colors)}>{aCls}</span>;
 }
 
-const SignalCard = React.memo(({ sig }: { sig: any }) => (
+const SignalCard = React.memo(({ sig, draft }: { sig: any, draft?: any }) => (
     <div className="bg-card border border-border/50 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/30 flex items-center justify-between group">
         <div className="flex items-center gap-4">
             <div className={cn(
@@ -129,31 +129,20 @@ const SignalCard = React.memo(({ sig }: { sig: any }) => (
                 </div>
             </div>
         </div>
-        <div className="text-[10px] font-mono text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity">
-            {new Date(sig.recv_time || Date.now()).toLocaleTimeString()}
+        <div className="flex flex-col items-end gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+            <div className="text-[10px] font-mono text-muted-foreground">
+                {new Date(sig.recv_time || Date.now()).toLocaleTimeString()}
+            </div>
+            {draft && draft.raw_volume !== undefined && (
+                <div className="text-[10px] font-mono bg-muted/80 px-2 py-0.5 rounded border border-border/50 font-medium">
+                    Lot: <span className="text-foreground font-bold">{draft.raw_volume.toFixed(2)}</span>
+                </div>
+            )}
         </div>
     </div>
 ));
 
-const DraftCard = React.memo(({ draft }: { draft: any }) => (
-    <div className="bg-card border border-border/50 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/30 flex items-center justify-between group">
-        <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border border-primary/20 bg-primary/10 text-primary shadow-sm">
-                <ShieldCheck size={18} />
-            </div>
-            <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                    <span className="font-bold text-lg tracking-tight text-foreground/90">{draft.symbol}</span>
-                    {getAssetClassBadge(draft.symbol, draft.asset_class)}
-                </div>
-                <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Risk Engine Draft</span>
-            </div>
-        </div>
-        <div className="text-xs font-mono bg-muted/50 px-3 py-1.5 rounded-lg border border-border/50 font-medium">
-            Lot: <span className="text-foreground">{draft.raw_volume?.toFixed(2)}</span>
-        </div>
-    </div>
-));
+
 
 const PositionCard = React.memo(({ pos, handleClosePosition }: { pos: any, handleClosePosition: (t: number) => void }) => {
     const rawCurrent = pos.price_current || pos.close_price;
@@ -281,7 +270,6 @@ export const OperationsPage: React.FC = () => {
 
     const tabs = [
         { id: 'signals', label: 'Sinais', icon: Zap },
-        { id: 'drafts', label: 'Lote (Risk & Drafts)', icon: Activity },
         { id: 'positions', label: 'Trades Ativos', icon: Cpu },
         { id: 'strategies', label: 'Estratégia (Tuning)', icon: SlidersHorizontal },
         { id: 'risk', label: 'Risco (Parameters)', icon: ShieldCheck },
@@ -472,30 +460,16 @@ export const OperationsPage: React.FC = () => {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {signals.map((sig, idx) => (
-                                    <SignalCard key={idx} sig={sig} />
-                                ))}
+                                {signals.map((sig, idx) => {
+                                    const draft = drafts.find(d => d.symbol === sig.symbol && (!d.direction || d.direction === sig.direction) && (!d.strategy_name || d.strategy_name === sig.strategy_name));
+                                    return <SignalCard key={idx} sig={sig} draft={draft} />;
+                                })}
                             </div>
                         )}
                     </div>
                 )}
 
-                {activeTab === 'drafts' && (
-                    <div className="flex flex-col h-full overflow-y-auto">
-                        {drafts.length === 0 ? (
-                            <div className="flex flex-col h-full items-center justify-center text-muted-foreground flex-1">
-                                <Activity size={48} className="mb-4 opacity-50" />
-                                <p>Nenhum rascunho de ordem pendente para Arbiter e Risk Management.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {drafts.map((draft, idx) => (
-                                    <DraftCard key={idx} draft={draft} />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+
 
                 {activeTab === 'positions' && (
                     <div className="flex flex-col h-full overflow-y-auto">
