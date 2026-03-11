@@ -56,7 +56,7 @@ jobs:
           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
           pwd
           ls -la
-          mirror -R -v --delete --parallel=10 ./frontend/dist/ domains/clickandoffers.com/public_html/
+          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
           quit
         "
 
