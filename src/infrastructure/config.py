@@ -83,12 +83,6 @@ class Settings(BaseSettings):
         "env_file_encoding": "utf-8",
         "extra": "ignore"
     }
-    
-    # Keep for V1 fallback
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
 
 # Global Settings Instance
 settings = Settings()
