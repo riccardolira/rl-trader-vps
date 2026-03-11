@@ -15,10 +15,17 @@ class UniverseConfigLoader:
 
     def load(self) -> UniverseConfig:
         if not os.path.exists(self.file_path):
-            log.info("UniverseConfigLoader: No config file found. Creating default.")
-            default_config = UniverseConfig()
-            self.save(default_config)
-            return default_config
+            log.info("UniverseConfigLoader: No custom config found. Checking for default.")
+            default_path = self.file_path.replace("universe_config.json", "universe_config.default.json")
+            if os.path.exists(default_path):
+                import shutil
+                shutil.copy2(default_path, self.file_path)
+                log.info(f"UniverseConfigLoader: Copied {default_path} to {self.file_path}.")
+            else:
+                log.info("UniverseConfigLoader: No default config found. Creating hardcoded default.")
+                default_config = UniverseConfig()
+                self.save(default_config)
+                return default_config
         
         try:
             with open(self.file_path, "r") as f:

@@ -26,6 +26,16 @@ class GuardianService:
 
     def _load_config(self) -> RiskConfig:
         config = RiskConfig()
+        
+        # Check if custom config exists, if not, copy default
+        if not os.path.exists(self.config_path):
+            log.info("GuardianService: No custom config found. Checking for default.")
+            default_path = self.config_path.replace("risk_config.json", "risk_config.default.json")
+            if os.path.exists(default_path):
+                import shutil
+                shutil.copy2(default_path, self.config_path)
+                log.info(f"GuardianService: Copied {default_path} to {self.config_path}.")
+
         if os.path.exists(self.config_path):
             try:
                 with open(self.config_path, "r") as f:

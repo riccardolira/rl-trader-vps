@@ -28,6 +28,16 @@ class StrategyConfigService:
 
     def _load_config(self) -> StrategyConfig:
         config = StrategyConfig(strategies={})
+        
+        # Check if custom config exists, if not, copy default
+        if not os.path.exists(self.config_path):
+            log.info("StrategyConfigService: No custom config found. Checking for default.")
+            default_path = self.config_path.replace("strategy_config.json", "strategy_config.default.json")
+            if os.path.exists(default_path):
+                import shutil
+                shutil.copy2(default_path, self.config_path)
+                log.info(f"StrategyConfigService: Copied {default_path} to {self.config_path}.")
+
         if os.path.exists(self.config_path):
             try:
                 with open(self.config_path, "r", encoding="utf-8") as f:
@@ -36,20 +46,28 @@ class StrategyConfigService:
             except Exception as e:
                 log.error(f"Failed to load strategy config: {e}")
                 
-        # Fill missing default profiles
+        # Fill missing parameters from default config
         needs_save = False
-        default_strategies = {
-            "TrendFollowing": StrategyConfigItem(name="TrendFollowing", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0, parameters={}),
-            "MeanReversion": StrategyConfigItem(name="MeanReversion", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0, parameters={}),
-            "VolatilityBreakout": StrategyConfigItem(name="VolatilityBreakout", enabled=False, weight_multiplier=1.0, min_score_threshold=40.0, parameters={}),
-            "SmartMoney": StrategyConfigItem(name="SmartMoney", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0, parameters={}),
-            "OrderFlowScalping": StrategyConfigItem(name="OrderFlowScalping", enabled=True, weight_multiplier=1.0, min_score_threshold=40.0, parameters={})
-        }
-        
-        for name, default_cfg in default_strategies.items():
+        default_path = self.config_path.replace("strategy_config.json", "strategy_config.default.json")
+        default_config = StrategyConfig(strategies={})
+        if os.path.exists(default_path):
+            try:
+                with open(default_path, "r", encoding="utf-8") as f:
+                    default_data = json.load(f)
+                    default_config = StrategyConfig(**default_data)
+            except Exception as e:
+                pass
+
+        for name, default_cfg in default_config.strategies.items():
             if name not in config.strategies:
                 config.strategies[name] = default_cfg
                 needs_save = True
+            else:
+                # Merge missing parameters into the user's existing strategy config
+                current_cfg = config.strategies[name]
+                if not current_cfg.parameters and default_cfg.parameters:
+                    current_cfg.parameters = default_cfg.parameters
+                    needs_save = True
                 
         if needs_save:
             self._save_config(config)
