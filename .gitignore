@@ -38,3 +38,4 @@ Thumbs.db
 # If you have specific files with passwords, add them here.
 *config*.json
 *config_backup*.json
+!*config.default.json
