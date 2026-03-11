@@ -123,11 +123,14 @@ class SMCStrategy(IStrategy):
 
         # 4. Microstructure Penalty
         penalty_micro = 0.0
+        MAX_SPREAD = dyn_config.get("max_spread_ratio", 0.15)
+        SPREAD_PENALTY = dyn_config.get("spread_penalty_score", 20.0)
+
         if context.atr_value > 0:
             spread_cost = context.spread * context.point_value
             spread_ratio = spread_cost / context.atr_value
-            if spread_ratio > 0.15: # SMC needs tight spreads, matching general standard
-                penalty_micro = 20.0 
+            if spread_ratio > MAX_SPREAD:
+                penalty_micro = SPREAD_PENALTY
                 
         # 5. Final Score
         raw_score = (0.6 * score_signal) + (0.4 * score_regime_fit)
@@ -135,8 +138,8 @@ class SMCStrategy(IStrategy):
         
         # 6. Exit Proposal (SMC Exits)
         # Stop is tight (below FVG/OB), Target is asymmetric
-        stop_mult = 1.5 # Adjusted from 0.8
-        take_mult = 3.0 # Adjusted from 2.0
+        stop_mult = dyn_config.get("stop_atr_mult", 1.5)
+        take_mult = dyn_config.get("take_atr_mult", 3.0)
         
         return StrategyCandidate(
             symbol=context.symbol,

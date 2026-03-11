@@ -86,11 +86,14 @@ class BreakoutStrategy(IStrategy):
 
         # 4. Microstructure Penalty
         penalty_micro = 0.0
+        MAX_SPREAD = dyn_config.get("max_spread_ratio", 0.15)
+        SPREAD_PENALTY = dyn_config.get("spread_penalty_score", 15.0)
+
         if context.atr_value > 0:
             spread_cost = context.spread * context.point_value
             spread_ratio = spread_cost / context.atr_value
-            if spread_ratio > 0.15: # Standardized across strategies
-                penalty_micro = 15.0
+            if spread_ratio > MAX_SPREAD:
+                penalty_micro = SPREAD_PENALTY
 
         # 5. Final Score
         # Weights: Signal 0.5, Regime 0.5 (Standard)
@@ -99,8 +102,8 @@ class BreakoutStrategy(IStrategy):
         final_score = max(0.0, raw_score - penalty_micro)
         
         # 5. Exit (Volatile Breakout tends to reverse fast if false, so tighter stop)
-        stop_mult = 2.0 # Adjusted from 1.0
-        take_mult = 4.0
+        stop_mult = dyn_config.get("stop_atr_mult", 2.0)
+        take_mult = dyn_config.get("take_atr_mult", 4.0)
         
         return StrategyCandidate(
             symbol=context.symbol,

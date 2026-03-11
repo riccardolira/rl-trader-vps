@@ -207,9 +207,12 @@ class ArbiterService:
             log.error(f"Arbiter: Sizing Error: {e}")
             volume = settings.EXECUTION_MIN_LOT
 
-        # Cap Volume
-        if volume > settings.EXECUTION_MAX_LOT:
-            volume = settings.EXECUTION_MAX_LOT
+        # Cap Volume based on Frontend UI Config (RiskConfig)
+        max_lot = getattr(guardian_service.config, "max_lot_size", settings.EXECUTION_MAX_LOT)
+        if volume > max_lot:
+            volume = max_lot
+            
+        # Hard floor from broker settings
         if volume < settings.EXECUTION_MIN_LOT:
             volume = settings.EXECUTION_MIN_LOT
         

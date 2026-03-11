@@ -128,15 +128,18 @@ class OrderFlowStrategy(IStrategy):
                   # Softened penalty so it doesn't automatically block if signal is 90
                   score_signal -= 20.0 
 
-        # 4. Microstructure Penalty (Spread Limit for Scalping)
+        # 4. Microstructure Penalty
         penalty_micro = 0.0
+        MAX_SPREAD = dyn_config.get("max_spread_ratio", 0.10)
+        SPREAD_PENALTY = dyn_config.get("spread_penalty_score", 20.0)
+
         if context.atr_value > 0:
             spread_cost = context.spread * context.point_value
             spread_ratio = spread_cost / context.atr_value
             # Scalping is VERY sensitive to Spread. 
-            # If spread is > 10% of ATR, penalize heavily.
-            if spread_ratio > 0.10: 
-                penalty_micro = 40.0 # We don't want to scalp wide spreads
+            # If spread is > MAX_SPREAD of ATR, penalize heavily.
+            if spread_ratio > MAX_SPREAD: 
+                penalty_micro = SPREAD_PENALTY
                 reason = reason + "| HIGH_SPREAD"
 
         # 5. Final Score Calculation
@@ -145,9 +148,9 @@ class OrderFlowStrategy(IStrategy):
         final_score = max(0.0, raw_score - penalty_micro)
         
         # 6. Exit Proposal (Scalping: Tight and Fast)
-        # Scalping requires high Win Rate. Stop goes right below the entry candle.
-        stop_mult = 1.0 
-        take_mult = 2.0 
+        # Stop is tight, Take is asymmetric
+        stop_mult = dyn_config.get("stop_atr_mult", 1.0)
+        take_mult = dyn_config.get("take_atr_mult", 2.0)
         
         return StrategyCandidate(
             symbol=context.symbol,

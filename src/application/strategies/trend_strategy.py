@@ -108,24 +108,26 @@ class TrendStrategy(IStrategy):
              score_regime_fit = 30.0 # Softened from 20.0
              reason = "REGIME_MISMATCH_RANGE"
 
-        # 3. Microstructure Penalty (Spread)
-        # Using simple logic from plan: if spread > 10% of ATR, penalize.
+        # 4. Microstructure Penalty
         penalty_micro = 0.0
+        MAX_SPREAD = dyn_config.get("max_spread_ratio", 0.15)
+        SPREAD_PENALTY = dyn_config.get("spread_penalty_score", 15.0)
+
         if context.atr_value > 0:
             spread_cost = context.spread * context.point_value
             spread_ratio = spread_cost / context.atr_value
-            if spread_ratio > 0.15: # Softened from 0.10
-                penalty_micro = 15.0 # Less severe penalty
+            if spread_ratio > MAX_SPREAD:
+                penalty_micro = SPREAD_PENALTY # Less severe penalty
             
         # 4. Final Score Calculation (MVP Formula)
         # Weights: Signal 0.6, Regime 0.4 (Give slightly more weight to the signal)
         raw_score = (0.6 * score_signal) + (0.4 * score_regime_fit)
         final_score = max(0.0, raw_score - penalty_micro)
         
-        # 5. Exit Proposal (Tighter limits for smaller capital)
-        # Previous: Stop 1.5x, Take 3.0x 
-        stop_mult = 2.5 # Adjusted from 1.5
-        take_mult = 4.0 # Adjusted from 3.0
+        # Stop is slightly wider than TP conceptually for trend following?
+        # Actually standard Trend Following: TP > SL.
+        stop_mult = dyn_config.get("stop_atr_mult", 2.5)
+        take_mult = dyn_config.get("take_atr_mult", 4.0)
         
         return StrategyCandidate(
             symbol=context.symbol,

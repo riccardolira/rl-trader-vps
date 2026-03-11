@@ -78,9 +78,17 @@ class Settings(BaseSettings):
     SESSION_CLOSE_WINNERS_IMMEDIATELY: bool = True
     SESSION_LOSER_REVERSAL_WINDOW_MINUTES: int = 30
     
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore"
+    }
+    
+    # Keep for V1 fallback
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 # Global Settings Instance
 settings = Settings()

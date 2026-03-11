@@ -15,7 +15,12 @@
         "_description_max_atr": "FISICA DO ELASTICO: Define o quao longe o preco pode estar da Media 20 (medido em ATRs) antes do robo considerar que e uma exaustao perigosa demais para entrar.",
         "max_atr_distance_tops": 2.0,
         "_description_pullback": "PRECISAO DO PULLBACK: Define a distancia (em fracao de ATR) que a minima/maxima da vela precisa chegar perto da Media 20 para ser um 'Retorno a Media' valido.",
-        "pullback_precision_atr": 0.5
+        "pullback_precision_atr": 0.5,
+        "_description_risk": "CONTROLE DE RISCO E SPREAD: Define o alvo, stop e tolerância de custos (spread).",
+        "stop_atr_mult": 2.5,
+        "take_atr_mult": 4.0,
+        "max_spread_ratio": 0.15,
+        "spread_penalty_score": 15.0
       }
     },
     "MeanReversion": {
@@ -28,7 +33,12 @@
         "rsi_bottom_percentile": 10.0,
         "rsi_top_percentile": 90.0,
         "_description_squeeze": "FILTRO DE LATERALIZACAO: Opera apenas se a Banda de Bollinger estiver relaxada abaixo deste valor.",
-        "max_squeeze_allowed": 40.0
+        "max_squeeze_allowed": 40.0,
+        "_description_risk": "CONTROLE DE RISCO E SPREAD: Define o alvo, stop e tolerância de custos (spread).",
+        "stop_atr_mult": 2.0,
+        "take_atr_mult": 2.5,
+        "max_spread_ratio": 0.15,
+        "spread_penalty_score": 15.0
       }
     },
     "VolatilityBreakout": {
@@ -40,7 +50,12 @@
         "_description_squeeze_pct": "PONTO DE PRESSAO: Indica compressao da Banda de Bollinger obrigatoria antes de romper o topo/fundo.",
         "squeeze_compression_pct": 30.0,
         "_description_volume": "CONFIRMACAO INSTITUCIONAL: Exige que a vela de rompimento tenha [X] vezes mais volume que a media (VMA 20).",
-        "min_volume_ratio": 1.25
+        "min_volume_ratio": 1.25,
+        "_description_risk": "CONTROLE DE RISCO E SPREAD: Define o alvo, stop e tolerância de custos (spread).",
+        "stop_atr_mult": 2.0,
+        "take_atr_mult": 4.0,
+        "max_spread_ratio": 0.15,
+        "spread_penalty_score": 15.0
       }
     },
     "SmartMoney": {
@@ -50,7 +65,12 @@
       "min_score_threshold": 65.0,
       "parameters": {
         "_description_pinbar": "DEFESA INSTITUCIONAL: Exige que a vela toque no FVG e deixe um Pavio de Rejeicao do tamanho deste percentual (ex: 0.40 = 40% de pavio absorvendo).",
-        "min_rejection_wick_pct": 0.40
+        "min_rejection_wick_pct": 0.40,
+        "_description_risk": "CONTROLE DE RISCO E SPREAD: Define o alvo, stop e tolerância de custos (spread).",
+        "stop_atr_mult": 1.5,
+        "take_atr_mult": 3.0,
+        "max_spread_ratio": 0.15,
+        "spread_penalty_score": 20.0
       }
     },
     "OrderFlowScalping": {
@@ -62,7 +82,12 @@
         "_description_spike": "DETECTOR DE BALEIAS: Aciona quando nota uma injecao anormal de capital. 1.5 exige 50% de volume acima do historico normal.",
         "min_volume_spike_ratio": 1.50,
         "_description_winner": "VENCEDOR DA BRIGA: Exige que a vela direcional comprida feche empurrando o topo/fundo nos [X] % extremos.",
-        "winner_close_pct": 0.70
+        "winner_close_pct": 0.70,
+        "_description_risk": "CONTROLE DE RISCO E SPREAD: Define o alvo, stop e tolerância de custos (spread).",
+        "stop_atr_mult": 1.0,
+        "take_atr_mult": 2.0,
+        "max_spread_ratio": 0.10,
+        "spread_penalty_score": 20.0
       }
     }
   }
