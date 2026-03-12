@@ -17,6 +17,9 @@ class EventStore(IPersistence):
     
     async def save_event(self, event: Any):
         """Persist an event to the audit log."""
+        if getattr(event, "type", "") == "UNIVERSE_SNAPSHOT":
+            return # Skip saving massive payloads to DB
+        
         try:
             payload_str = json.dumps(event.payload, default=str)
             values = dict(

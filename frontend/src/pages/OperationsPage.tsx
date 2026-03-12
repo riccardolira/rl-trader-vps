@@ -103,44 +103,58 @@ function getAssetClassBadge(symbol: string, presetClass?: string) {
     return <span className={cn("text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border tracking-widest", colors)}>{aCls}</span>;
 }
 
-const SignalCard = React.memo(({ sig, draft }: { sig: any, draft?: any }) => (
-    <div className="bg-card border border-border/50 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/30 flex items-center justify-between group">
-        <div className="flex items-center gap-4">
-            <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border shadow-sm",
-                sig.direction === 'BUY' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-            )}>
-                {sig.direction === 'BUY' ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+const SignalCard = React.memo(({ sig, draft }: { sig: any, draft?: any }) => {
+    // Determine the raw volume to display
+    let volumeDisplay = null;
+    if (draft && draft.raw_volume !== undefined) {
+        volumeDisplay = draft.raw_volume.toFixed(2);
+    } else if (sig.volume !== undefined) {
+        volumeDisplay = sig.volume.toFixed(2);
+    }
+
+    return (
+        <div className="bg-card border border-border/50 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/30 flex items-center justify-between group">
+            <div className="flex items-center gap-4">
+                <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border shadow-sm",
+                    sig.direction === 'BUY' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                )}>
+                    {sig.direction === 'BUY' ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+                </div>
+                <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                        <span className="font-bold text-lg tracking-tight text-foreground/90">{sig.symbol}</span>
+                        <span className={cn(
+                            "px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase",
+                            sig.direction === 'BUY' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                        )}>
+                            {sig.direction}
+                        </span>
+                        {getAssetClassBadge(sig.symbol, sig.asset_class)}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                        Estratégia: <span className="font-bold text-foreground/80">{sig.strategy_name}</span>
+                        {sig.score && <span className="ml-2 bg-muted/50 px-1.5 py-0.5 rounded border border-border/50">Score {sig.score.toFixed(1)}</span>}
+                    </div>
+                </div>
             </div>
-            <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                    <span className="font-bold text-lg tracking-tight text-foreground/90">{sig.symbol}</span>
-                    <span className={cn(
-                        "px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase",
-                        sig.direction === 'BUY' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-                    )}>
-                        {sig.direction}
-                    </span>
-                    {getAssetClassBadge(sig.symbol, sig.asset_class)}
+            <div className="flex flex-col items-end gap-1">
+                <div className="text-[11px] font-mono text-muted-foreground font-medium">
+                    {new Date(sig.timestamp ? sig.timestamp : (sig.recv_time || Date.now())).toLocaleTimeString()}
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
-                    Estratégia: <span className="font-bold text-foreground/80">{sig.strategy_name}</span>
-                    {sig.score && <span className="ml-2 bg-muted/50 px-1.5 py-0.5 rounded border border-border/50">Score {sig.score.toFixed(1)}</span>}
-                </div>
+                {volumeDisplay ? (
+                    <div className="text-[11px] font-mono bg-muted/80 px-2 py-0.5 rounded border border-border/50 font-medium">
+                        Lot: <span className="text-foreground font-bold">{volumeDisplay}</span>
+                    </div>
+                ) : (
+                    <div className="text-[10px] font-mono bg-muted/50 px-2 py-0.5 rounded border border-border/50 text-muted-foreground/50 italic">
+                        Calculando lote...
+                    </div>
+                )}
             </div>
         </div>
-        <div className="flex flex-col items-end gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-            <div className="text-[10px] font-mono text-muted-foreground">
-                {new Date(sig.recv_time || Date.now()).toLocaleTimeString()}
-            </div>
-            {draft && draft.raw_volume !== undefined && (
-                <div className="text-[10px] font-mono bg-muted/80 px-2 py-0.5 rounded border border-border/50 font-medium">
-                    Lot: <span className="text-foreground font-bold">{draft.raw_volume.toFixed(2)}</span>
-                </div>
-            )}
-        </div>
-    </div>
-));
+    );
+});
 
 
 
@@ -461,7 +475,7 @@ export const OperationsPage: React.FC = () => {
                         ) : (
                             <div className="space-y-3">
                                 {signals.map((sig, idx) => {
-                                    const draft = drafts.find(d => d.symbol === sig.symbol && (!d.direction || d.direction === sig.direction) && (!d.strategy_name || d.strategy_name === sig.strategy_name));
+                                    const draft = drafts.find(d => d.signal_id === sig.id || (d.symbol === sig.symbol && (!d.side || d.side === sig.direction || d.direction === sig.direction) && (!d.strategy_name || d.strategy_name === sig.strategy_name)));
                                     return <SignalCard key={idx} sig={sig} draft={draft} />;
                                 })}
                             </div>

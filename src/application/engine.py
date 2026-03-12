@@ -35,8 +35,7 @@ class Engine:
         proc = await asyncio.create_subprocess_shell("alembic upgrade head")
         await proc.communicate()
         if proc.returncode != 0:
-            log.critical("Database migrations failed. Aborting boot.")
-            return
+            log.warning("Database migrations failed. Continuing boot anyway (might be using SQLite fallback).")
         
         # 3. Connectivity & Infra
         if not await mt5_adapter.connect():

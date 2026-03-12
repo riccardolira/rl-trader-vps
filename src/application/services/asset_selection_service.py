@@ -357,7 +357,7 @@ class AssetSelectionService:
                  
             ranking_candidates.append(row)
 
-            if self._counts.with_metrics % 20 == 0:
+            if self._counts.with_metrics % 3 == 0:
                 self._last_ranking = sorted(ranking_candidates, key=lambda x: x.score or 0.0, reverse=True)
                 self._broadcast_snapshot()
 
