@@ -10,6 +10,7 @@ class StrategyUpdateRequest(BaseModel):
     enabled: bool = None
     weight_multiplier: float = None
     min_score_threshold: float = None
+    parameters: dict = None
 
 @router.get("/config", response_model=List[StrategyConfigItem])
 async def get_strategies_config():
