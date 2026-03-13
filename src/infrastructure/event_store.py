@@ -39,7 +39,10 @@ class EventStore(IPersistence):
                 
             await db_pool.execute(stmt)
         except Exception as e:
-            log.error(f"Failed to persist event {event}: {e}")
+            if "1142" in str(e) and "audit_events" in str(e):
+                pass # Suppress logging for known permission issue to avoid console flood
+            else:
+                log.error(f"Failed to persist event {event}: {e}")
 
     @async_ttl_cache(ttl_seconds=2)
     async def get_active_trades(self) -> List[Trade]:

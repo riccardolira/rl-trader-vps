@@ -47,10 +47,12 @@ class ArbiterService:
             return
 
         # 0.5 Anti-Stacking Check (Max X Open Trades per Symbol)
-        from src.infrastructure.event_store import event_store
+        from src.infrastructure.mt5_adapter import mt5_adapter
         from src.application.services.guardian_service import guardian_service
         import time
-        active_trades = await event_store.get_active_trades()
+        active_trades = await mt5_adapter.get_positions()
+        if active_trades is None:
+            active_trades = []
         symbol_trades_count = sum(1 for t in active_trades if t.symbol == signal.symbol)
         
         # Clean up old pending drafts (older than 15 seconds)

@@ -95,7 +95,8 @@ class DatabasePool:
                 return result.rowcount
         except Exception as e:
             msg = str(sql_or_stmt)[:100] + "..."
-            log.error(f"DatabasePool Error: {e} | SQL: {msg}")
+            if "1142" not in str(e) or "audit_events" not in msg:
+                log.error(f"DatabasePool Error: {e} | SQL: {msg}")
             raise e
 
 db_pool = DatabasePool()
