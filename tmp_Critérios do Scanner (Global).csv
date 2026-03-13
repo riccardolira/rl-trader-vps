@@ -1,0 +1,7 @@
+Parametro,Valor
+selection_mode,AUTO
+min_active_set_size,3
+max_active_set_size,10
+rebuild_interval_sec,900
+Swap Delta Score,5
+Hold Buffer Slots,2

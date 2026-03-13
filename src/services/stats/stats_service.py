@@ -200,12 +200,15 @@ class StatsService:
 
             # 1b. Strategy Signals
             metrics["strategy_signals"] = {}
-            strategy_signals_query = "SELECT json_extract(payload_json, '$.strategy_name') as strategy_name, count(*) as count FROM audit_events WHERE type = 'SIGNAL_GENERATED' GROUP BY json_extract(payload_json, '$.strategy_name')"
+            # OTIMIZAÇÃO: Buscando apenas os últimos 500 para evitar Table Scan massivo que trava UI
+            strategy_signals_query = "SELECT json_extract(payload_json, '$.strategy_name') as strategy_name FROM audit_events WHERE type = 'SIGNAL_GENERATED' ORDER BY timestamp DESC LIMIT 500"
             records = await db_pool.execute(strategy_signals_query, fetch="all", dictionary=True)
             if records:
                 for row in records:
                     s_name = row["strategy_name"] or "Unknown"
-                    metrics["strategy_signals"][s_name] = row["count"]
+                    if s_name not in metrics["strategy_signals"]:
+                         metrics["strategy_signals"][s_name] = 0
+                    metrics["strategy_signals"][s_name] += 1
             
             # 2. Guardian Rejection Reasons (Pie chart)
             reject_query = "SELECT json_extract(payload_json, '$.reason') as reason, count(*) as count FROM audit_events WHERE type = 'ORDER_REJECTED' GROUP BY json_extract(payload_json, '$.reason')"

@@ -37,7 +37,7 @@ async def get_diagnostics():
     
     # Enrich with MT5 status
     snap["mt5_connected"] = mt5_worker_client.is_healthy
-    snap["mt5_latency_ms"] = mt5_worker_client.measure_latency()
+    snap["mt5_latency_ms"] = -1.0 # Removed synchronous ping to prevent event loop deadlock
     snap["last_mt5_error"] = "None" if mt5_worker_client.is_healthy else "Worker disconnected/restarting"
     
     # Determine source (simplified)

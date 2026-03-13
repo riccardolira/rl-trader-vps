@@ -246,6 +246,13 @@ def datetime_handler(x):
 async def broadcast_event_to_ws(event):
     try:
         if getattr(event, "type", "") == "UNIVERSE_SNAPSHOT":
+            # Broadcast a lightweight ping instead of the massive payload
+            msg = json.dumps({
+                "type": "UNIVERSE_RANKING_COMPUTED", 
+                "timestamp": datetime.utcnow().isoformat(),
+                "payload": {}
+            })
+            await manager.broadcast(msg)
             return # Skip broadcasting massive payload to prevent MemoryError crashes
 
         if hasattr(event, "model_dump_json"):

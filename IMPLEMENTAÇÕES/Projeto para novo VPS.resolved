@@ -1,0 +1,53 @@
+# Blueprint de Arquitetura: RL Trader Mastery Edition
+*Documentação Técnica para Upgrade de Hardware (2+ vCPU / 4GB+ RAM)*
+
+Este documento serve como o manual de implementação para transformarmos o robô atual em um sistema de nível **Institutional Quant**. Guarde este plano para quando o novo VPS estiver ativo.
+
+---
+
+## 🗺️ Visão Geral do Sistema
+A nova arquitetura abandona o processamento linear (um por um) e adota um modelo de **Micro-Serviços Paralelos**.
+
+### 1. Motor de Escaneamento Paralelo (The Hydra)
+*   **Implementação:** Utilizar a biblioteca `multiprocessing` do Python.
+*   **Lógica:**
+    *   **Worker A (vCPU 1):** Focado em *Major Pairs* (EURUSD, GBPUSD, etc) com ciclo de 1 segundo.
+    *   **Worker B (vCPU 2):** Focado em *Exotics e Commodities* com ciclo de 5 segundos.
+*   **Ganho:** Captura de sinais com 50% menos latência. Se o mercado estourar, o robô reage no primeiro tick da nova vela.
+
+### 2. Camada de Inteligência de Probabilidade (IA Layer)
+Em vez de depender apenas de indicadores (RSI, ADX), o sinal passará por uma validação matemática:
+*   **Modelo:** XGBoost (leve e ultra-rápido para CPU).
+*   **Features:** Horário, Volatilidade Relativa, Correlação da Moeda, e Histórico de Win-Rate das últimas 24h.
+*   **Saída:** O bot não dirá apenas "Compra", ele dirá: *"Compra com 82% de probabilidade histórica"*.
+*   **Ação:** Só executamos trades com probabilidade > 75%, filtrando 90% dos *stop-loss* bobos de mercado lateral.
+
+### 3. Cache de Alta Velocidade (Redis integration)
+Com 4GB+ de RAM, eliminamos o gargalo de leitura de disco (I/O) que trava o sistema hoje.
+*   **Tecnologia:** Redis (In-memory data store).
+*   **Fluxo:** O Scanner joga os últimos 500 ticks de cada par no Redis. 
+*   **Vantagem:** O `Strategy Engine` consulta dados na RAM em **nanosegundos**, permitindo análises de correlação cruzada instantâneas (ex: "Se XAUUSD subiu, verifique correlação com AUDUSD agora").
+
+### 4. Gestão de Risco Quantitativa (The Matrix)
+*   **Cálculo de Exposição:** O Robô medirá a exposição por *Moeda Base*. Ex: Se já tem EURUSD e EURGBP aberto, ele bloqueia novas entradas em EUR para não sobrecarregar a margem caso o Euro caia.
+*   **Monte Carlo:** Antes de cada ordem, o sistema roda 500 simulações rápidas. Se o "Expected Value" (Valor Esperado) for negativo, a ordem é cancelada pelo `Arbiter`.
+
+### 5. Auditoria e Telemetria de Precisão
+*   **Auto-Cleanup:** O sistema terá uma tarefa de "Saneamento de Domingo" (`VACUUM` no banco e limpeza de logs em RAM).
+*   **Painel Live:** O Analytics passará a usar *WebSockets Progressivos*, atualizando cada milissegundo das estatísticas sem pesar no processador.
+
+---
+
+## 🛠️ Recomendações de Setup (Hospedagem)
+Para este projeto, busque o seguinte perfil:
+1.  **Região:** `US-East` (Virgínia/NY) ou `Europe-West` (Londres/Frankfurt), dependendo de onde está o servidor da sua corretora.
+2.  **Tecnologia:** KVM (Virtualização Real).
+3.  **Disco:** NVMe (Essencial para a velocidade de escrita dos logs e trades).
+
+---
+
+> [!IMPORTANT]
+> **Ordem de Implementação Futura:**
+> 1. Migração de Código -> 2. Ativação do Redis -> 3. Paralelização do Scanner -> 4. Implementação da IA de Probabilidade.
+
+*Este documento foi gerado para o usuário RICCARDO LIRA como o Guia de Maestria do RL Trader.*

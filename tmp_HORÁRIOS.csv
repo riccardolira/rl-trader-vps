@@ -1,0 +1,12 @@
+Asset_Class,Unnamed: 1,Time_Mode,Time_Start,Time_End,Timezone,Trading_Days
+FOREX,,AUTO,00:00,23:59,UTC,"[0, 1, 2, 3, 4]"
+METALS,,AUTO,00:00,23:59,UTC,"[0, 1, 2, 3, 4]"
+CRYPTO,,AUTO,00:00,23:59,UTC,"[0, 1, 2, 3, 4, 5, 6]"
+INDICES_NY,,AUTO,09:30,17:00,America/New_York,"[0, 1, 2, 3, 4]"
+INDICES_B3,,AUTO,09:05,17:50,America/Sao_Paulo,"[0, 1, 2, 3, 4]"
+INDICES_EU,,AUTO,07:00,16:30,Europe/Berlin,"[0, 1, 2, 3, 4]"
+STOCKS_US,,AUTO,09:30,16:00,America/New_York,"[0, 1, 2, 3, 4]"
+STOCKS_BR,,AUTO,10:00,17:50,America/Sao_Paulo,"[0, 1, 2, 3, 4]"
+STOCKS_EU,,AUTO,07:00,16:30,Europe/Berlin,"[0, 1, 2, 3, 4]"
+COMMODITIES_AGRI,,AUTO,09:30,14:20,America/Chicago,"[0, 1, 2, 3, 4]"
+COMMODITIES_ENERGY,,AUTO,00:00,23:59,America/New_York,"[0, 1, 2, 3, 4]"

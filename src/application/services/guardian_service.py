@@ -193,6 +193,23 @@ class GuardianService:
             
             from src.domain.models import get_magic_for_strategy
             
+            # Calculate True Money Risk based on raw volume and SL distance
+            from src.infrastructure.config import settings
+            money_risk = 0.0
+            worst_case_loss = 0.0
+            
+            if draft.proposed_sl and draft.proposed_sl > 0:
+                 open_price = draft.market_context.current_price if draft.market_context and hasattr(draft.market_context, 'current_price') else draft.proposed_entry
+                 if open_price and open_price > 0:
+                     pt_val = getattr(settings, "POINT_VALUE", 1.0) # Might need MT5 fetch in future for precise
+                     distance = abs(open_price - draft.proposed_sl)
+                     money_risk = round(distance * draft.raw_volume * pt_val, 2)
+                     worst_case_loss = money_risk * 1.05 # Add 5% for slippage projection
+                     
+            if money_risk == 0.0:
+                 money_risk = 50.0 # Fallback conservative
+                 worst_case_loss = 55.0
+            
             # Create Approved Order
             order = Order(
                 draft_id=draft.id,
@@ -208,9 +225,9 @@ class GuardianService:
                 risk_snapshot=RiskSnapshot(
                     equity=equity,
                     balance=balance,
-                    risk_pct=(50.0 / equity) * 100 if equity > 0 else 0.01,
-                    money_risk=50.0,
-                    worst_case_loss=55.0,
+                    risk_pct=(money_risk / equity) * 100 if equity > 0 else 0.01,
+                    money_risk=money_risk,
+                    worst_case_loss=worst_case_loss,
                     hard_cap_approved=True,
                     daily_dd_pct=0.0,
                     exposure_total=0.0

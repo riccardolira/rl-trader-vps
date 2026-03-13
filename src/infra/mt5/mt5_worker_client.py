@@ -11,7 +11,9 @@ class MT5WorkerClient:
     # Granular Timeouts (Seconds)
     TIMEOUTS = {
         "DEFAULT": 5.0,
-        "get_history": 30.0, # Heavy data
+        "symbols_get": 15.0,
+        "symbols_get_with_path": 15.0,
+        "get_history": 15.0, # Heavy data
         "order_send": 10.0,  # Network latency
         "get_positions": 5.0, 
         "get_account": 3.0,
@@ -142,7 +144,7 @@ class MT5WorkerClient:
                     return None
                     
             except queue.Empty:
-                log.critical(f"MT5WorkerClient: TIMEOUT waiting for {method} ({timeout}s). Killing Worker.")
+                log.critical(f"MT5WorkerClient: TIMEOUT waiting for {method}({args}) ({timeout}s). Killing Worker.")
                 self.restart()
                 # Use event bus to notify? 
                 if raise_on_error:

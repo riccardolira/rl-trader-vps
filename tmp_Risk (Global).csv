@@ -1,0 +1,8 @@
+Param,Value
+max_daily_drawdown_pct,
+max_trades_per_day,
+max_trades_open,10.0
+max_lot_size,0.15
+news_filter_active,0.0
+news_blackout_minutes_before,
+news_blackout_minutes_after,

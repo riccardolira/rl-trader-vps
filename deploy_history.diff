@@ -1,0 +1,606 @@
+﻿commit 298b36d076832ea9f46bb4fc73dd58b974a2fddf
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 22:26:24 2026 -0400
+
+    fix(deploy): use correct public_html path in LFTP action
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 96695dc..1caf0f5 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -56,7 +56,7 @@ jobs:
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+           pwd
+           ls -la
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ domains/clickandoffers.com/public_html/
+           quit
+         "
+ 
+
+commit 98a8e8dadf8835bf32e8f900530e851b78b89175
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 02:50:18 2026 -0400
+
+    fix(deploy): use relative root for isolated ftp account
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 5fb3a84..96695dc 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -56,7 +56,7 @@ jobs:
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+           pwd
+           ls -la
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ /home/u116771474/domains/clickandoffers.com/files/public_html/
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
+           quit
+         "
+ 
+
+commit 2d99f84352c75cb173b481fbb34705b3f4a23cc2
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 02:39:34 2026 -0400
+
+    feat(deploy): test alternative absolute path with files/public_html
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 96695dc..5fb3a84 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -56,7 +56,7 @@ jobs:
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+           pwd
+           ls -la
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ /home/u116771474/domains/clickandoffers.com/files/public_html/
+           quit
+         "
+ 
+
+commit 65d6b2f239e1cf7abeba023293e7cfac8d7a3c35
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 02:27:57 2026 -0400
+
+    fix(deploy): target root assuming isolated public_html ftp account
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 2e7952e..96695dc 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -56,7 +56,7 @@ jobs:
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+           pwd
+           ls -la
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ /home/u116771474/domains/clickandoffers.com/public_html
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
+           quit
+         "
+ 
+
+commit 3b6ff6e1cfdb16453f7219d75d573b9ce8c9c5f1
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 02:23:30 2026 -0400
+
+    fix(deploy): use literal absolute path from hostinger panel
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 523f378..2e7952e 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -56,7 +56,7 @@ jobs:
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+           pwd
+           ls -la
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ /home/u116771474/domains/clickandoffers.com/public_html
+           quit
+         "
+ 
+
+commit 8ac74029e6fe02084874f3cb2da585d6d77f0309
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 02:20:52 2026 -0400
+
+    chore(deploy): test live index post-deployment
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 6b7a707..523f378 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -59,3 +59,10 @@ jobs:
+           mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
+           quit
+         "
++
++    - name: ­ƒöì Verify Live Deployment
++      run: |
++        echo "Fetching headers from https://clickandoffers.com"
++        curl -I https://clickandoffers.com
++        echo "Fetching content snippet..."
++        curl -s https://clickandoffers.com | head -n 20
+
+commit 8da3a6927503efe8ec6b719437fc63e18f2690e1
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 02:18:56 2026 -0400
+
+    fix(deploy): revert to public_html root path based on ftp screenshot
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 42f0a1e..6b7a707 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -56,6 +56,6 @@ jobs:
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+           pwd
+           ls -la
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./domains/clickandoffers.com/public_html/
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
+           quit
+         "
+
+commit 82c87e067df7456947a5e182986fd0e0fe69838d
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 02:11:43 2026 -0400
+
+    fix: hostinger ftp deployment path for clickandoffers.com
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 6b7a707..42f0a1e 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -56,6 +56,6 @@ jobs:
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+           pwd
+           ls -la
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./domains/clickandoffers.com/public_html/
+           quit
+         "
+
+commit 06a71b828d8d41ebd36b0b25436467e4708dff9e
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 01:17:17 2026 -0400
+
+    fix(deploy): switch to index.php entry point with dynamic headers to bypass invincible Hostinger static cache
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index d78e3a5..6b7a707 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -31,7 +31,8 @@ jobs:
+       working-directory: ./frontend
+       run: |
+         npm run build
+-        echo "<!-- Deploy $(date +%s) -->" >> dist/index.html
++        mv dist/index.html dist/index.php
++        sed -i '1s/^/<?php header("Cache-Control: no-cache, must-revalidate"); header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); ?>\n/' dist/index.php
+       
+     - name: ­ƒÜÇ Install LFTP
+       run: sudo apt-get update && sudo apt-get install -y lftp
+
+commit 2f04cbcdd2b53b4e27c2d12448b0793d823d17e2
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 01:09:38 2026 -0400
+
+    fix(deploy): inject pwd and ls to explicitly trace hostinger ftp jailing behavior
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index d3e2619..d78e3a5 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -43,6 +43,7 @@ jobs:
+         FTP_HOST: ${{ secrets.HOSTINGER_FTP_SERVER }}
+       run: |
+         lftp -c "
++          set cmd:fail-exit true
+           set net:timeout 15
+           set net:max-retries 3
+           set ftp:passive-mode true
+@@ -52,6 +53,8 @@ jobs:
+           set ssl:verify-certificate no
+           set ssl:check-hostname no
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
++          pwd
++          ls -la
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
+           quit
+         "
+
+commit 27904ce880f58843747dd6a2af5b04acb5c3aa79
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 01:02:28 2026 -0400
+
+    fix(deploy): revert lftp target to dot root to properly map into chrooted public_html
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 4977ef6..d3e2619 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -52,6 +52,6 @@ jobs:
+           set ssl:verify-certificate no
+           set ssl:check-hostname no
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
+           quit
+         "
+
+commit 48cd7f77986e2bea3e3c26a71fe2eb305cb8bfe8
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 00:53:14 2026 -0400
+
+    fix(deploy): inject passive mode and timeout flags to prevent lftp from hanging on github NAT
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 17aed87..4977ef6 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -43,8 +43,14 @@ jobs:
+         FTP_HOST: ${{ secrets.HOSTINGER_FTP_SERVER }}
+       run: |
+         lftp -c "
+-          set ssl:verify-certificate no
++          set net:timeout 15
++          set net:max-retries 3
++          set ftp:passive-mode true
+           set ftp:ssl-allow true
++          set ftp:ssl-force true
++          set ftp:ssl-protect-data true
++          set ssl:verify-certificate no
++          set ssl:check-hostname no
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+           mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
+           quit
+
+commit c982612a67a64cfb12c08ae31a351120c88b0add
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 00:40:00 2026 -0400
+
+    fix(deploy): correct lftp path to target public_html instead of ftp root
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 486080f..17aed87 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -46,6 +46,6 @@ jobs:
+           set ssl:verify-certificate no
+           set ftp:ssl-allow true
+           open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
+-          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./public_html/
+           quit
+         "
+
+commit d5fd9b21e77c6b1290b4f86208e760ae5550ec61
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 00:34:06 2026 -0400
+
+    fix(deploy): replace buggy ftp-deploy-action with robust native lftp mirror
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index f44c3da..486080f 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -33,17 +33,19 @@ jobs:
+         npm run build
+         echo "<!-- Deploy $(date +%s) -->" >> dist/index.html
+       
+-    - name: ­ƒÜÇ Sync files via FTP
+-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+-      with:
+-        server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+-        username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+-        password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+-        local-dir: ./frontend/dist/
+-        server-dir: ./
+-        dangerous-clean-slate: false
+-        state-name: '.deploy-state-v4.json'
+-        exclude: |
+-          **/.git*
+-          **/.git*/**
+-          **/node_modules/**
++    - name: ­ƒÜÇ Install LFTP
++      run: sudo apt-get update && sudo apt-get install -y lftp
++      
++    - name: ­ƒÜÇ Sync files via LFTP (Clean Slate)
++      env:
++        FTP_USER: ${{ secrets.HOSTINGER_FTP_USERNAME }}
++        FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
++        FTP_HOST: ${{ secrets.HOSTINGER_FTP_SERVER }}
++      run: |
++        lftp -c "
++          set ssl:verify-certificate no
++          set ftp:ssl-allow true
++          open -u $FTP_USER,$FTP_PASSWORD $FTP_HOST
++          mirror -R -v --delete --parallel=10 ./frontend/dist/ ./
++          quit
++        "
+
+commit 093df5f14d89d82e6a548cbbb6fcf0a9e6711f5f
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 00:22:11 2026 -0400
+
+    fix(deploy): inject dynamic epoch timestamp to index.html to force FTP delta upload and bust cache
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 7be93f3..f44c3da 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -29,7 +29,9 @@ jobs:
+       
+     - name: ­ƒö¿ Build Project
+       working-directory: ./frontend
+-      run: npm run build
++      run: |
++        npm run build
++        echo "<!-- Deploy $(date +%s) -->" >> dist/index.html
+       
+     - name: ­ƒÜÇ Sync files via FTP
+       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+
+commit 724c97c226335e47c414250e8e55761f58028eb2
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 00:14:38 2026 -0400
+
+    fix(deploy): force fresh upload by overriding state-name
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index e55eaf7..7be93f3 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -38,9 +38,9 @@ jobs:
+         username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+-        server-dir: ./public_html/
++        server-dir: ./
+         dangerous-clean-slate: false
+-        state-name: ''
++        state-name: '.deploy-state-v4.json'
+         exclude: |
+           **/.git*
+           **/.git*/**
+
+commit c0c4eaa31160576db3304a3444c78294dd4f0b29
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 00:09:42 2026 -0400
+
+    fix(deploy): revert safe ftp sync state for normal operations
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index f7992fe..e55eaf7 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -39,7 +39,7 @@ jobs:
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+         server-dir: ./public_html/
+-        dangerous-clean-slate: true
++        dangerous-clean-slate: false
+         state-name: ''
+         exclude: |
+           **/.git*
+
+commit 2a9730af1818799a65a152f4c1772cb75256b801
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Tue Mar 10 00:09:07 2026 -0400
+
+    fix(deploy): force clean slate to bypass corrupted ftp sync state
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index e55eaf7..f7992fe 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -39,7 +39,7 @@ jobs:
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+         server-dir: ./public_html/
+-        dangerous-clean-slate: false
++        dangerous-clean-slate: true
+         state-name: ''
+         exclude: |
+           **/.git*
+
+commit 547bf1d7523ab2b17e9bfae786deae5f58df340e
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Mon Mar 9 23:59:02 2026 -0400
+
+    fix(deploy): restore proven FTP server-dir public_html path
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index f8b243f..e55eaf7 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -38,7 +38,7 @@ jobs:
+         username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+-        server-dir: ./domains/clickandoffers.com/public_html/
++        server-dir: ./public_html/
+         dangerous-clean-slate: false
+         state-name: ''
+         exclude: |
+
+commit 1b5fd06d2a0d5298d4361a83c8460777335c401f
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Mon Mar 9 23:54:26 2026 -0400
+
+    fix(deploy): target correct clickandoffers.com public_html directory instead of root
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 5554182..f8b243f 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -38,7 +38,7 @@ jobs:
+         username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+-        server-dir: ./
++        server-dir: ./domains/clickandoffers.com/public_html/
+         dangerous-clean-slate: false
+         state-name: ''
+         exclude: |
+
+commit 8c59d257d4b07e97b674164c1d8c705b595626b5
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Sun Mar 8 17:50:11 2026 -0400
+
+    docs: finalized mobile pwa tasks
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index d64fa82..5554182 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -41,3 +41,7 @@ jobs:
+         server-dir: ./
+         dangerous-clean-slate: false
+         state-name: ''
++        exclude: |
++          **/.git*
++          **/.git*/**
++          **/node_modules/**
+
+commit 958adba6cd49901b46f554e88699a74072be7020
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Fri Mar 6 05:44:18 2026 -0400
+
+    fix: Correct FTP deployment path to root directory
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index a59ffd4..d64fa82 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -38,6 +38,6 @@ jobs:
+         username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+-        server-dir: ./domains/clickandoffers.com/public_html/
++        server-dir: ./
+         dangerous-clean-slate: false
+         state-name: ''
+
+commit 1b28fc8cc21b935e0127a6507311869fb69be7e5
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Fri Mar 6 05:35:47 2026 -0400
+
+    fix: Target correct Hostinger domain public_html folder
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 3e81de5..a59ffd4 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -38,6 +38,6 @@ jobs:
+         username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+-        server-dir: ./public_html/
++        server-dir: ./domains/clickandoffers.com/public_html/
+         dangerous-clean-slate: false
+         state-name: ''
+
+commit 067a0a54c7f251cc611d060e0f26af4562c8f686
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Fri Mar 6 05:30:31 2026 -0400
+
+    fix: Disable ftp state cache to force full upload
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 0ed3089..3e81de5 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -40,3 +40,4 @@ jobs:
+         local-dir: ./frontend/dist/
+         server-dir: ./public_html/
+         dangerous-clean-slate: false
++        state-name: ''
+
+commit 00e1894bb395eaac4848b15d2e62a3478c9a4532
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Fri Mar 6 05:17:46 2026 -0400
+
+    fix: Revert clean slate and trigger normal deployment
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 06042de..0ed3089 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -39,4 +39,4 @@ jobs:
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+         server-dir: ./public_html/
+-        dangerous-clean-slate: true
++        dangerous-clean-slate: false
+
+commit b8123c587a90b2cf4c6e401faaee6351b7c3851b
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Fri Mar 6 05:10:03 2026 -0400
+
+    feat: Force clean slate on Hostinger FTP deployment
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 0ed3089..06042de 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -39,4 +39,4 @@ jobs:
+         password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+         local-dir: ./frontend/dist/
+         server-dir: ./public_html/
+-        dangerous-clean-slate: false
++        dangerous-clean-slate: true
+
+commit 0e942423d35e7cb1e92949d041a2fa6915743c72
+Author: Riccardo Lira <riccardolira@hotmail.com>
+Date:   Fri Mar 6 01:10:48 2026 -0400
+
+    feat: Add Frontend Authentication Logic and Github Actions Deployment Pipeline
+
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+new file mode 100644
+index 0000000..0ed3089
+--- /dev/null
++++ b/.github/workflows/deploy.yml
+@@ -0,0 +1,42 @@
++name: Deploy Frontend to Hostinger
++
++on:
++  push:
++    branches:
++      - main
++    paths:
++      - 'frontend/**'
++      - '.github/workflows/deploy.yml'
++
++jobs:
++  web-deploy:
++    name: ­ƒÄë Build and Deploy React App
++    runs-on: ubuntu-latest
++    steps:
++    - name: ­ƒÜÜ Get latest code
++      uses: actions/checkout@v4
++      
++    - name: ÔÜÖ´©Å Setup Node.js
++      uses: actions/setup-node@v4
++      with:
++        node-version: '20'
++        cache: 'npm'
++        cache-dependency-path: 'frontend/package-lock.json'
++        
++    - name: ­ƒôª Install Dependencies
++      working-directory: ./frontend
++      run: npm ci
++      
++    - name: ­ƒö¿ Build Project
++      working-directory: ./frontend
++      run: npm run build
++      
++    - name: ­ƒÜÇ Sync files via FTP
++      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
++      with:
++        server: ${{ secrets.HOSTINGER_FTP_SERVER }}
++        username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
++        password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
++        local-dir: ./frontend/dist/
++        server-dir: ./public_html/
++        dangerous-clean-slate: false

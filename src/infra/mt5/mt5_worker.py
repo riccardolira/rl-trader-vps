@@ -159,7 +159,13 @@ def mt5_worker_loop(command_queue, result_queue, login_config):
                     while current_retry < 3:
                         res = mt5.order_send(kwargs.get("request"))
                         if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                            response["data"] = res._asdict()
+                            res_dict = res._asdict()
+                            if 'request' in res_dict:
+                                if hasattr(res_dict['request'], '_asdict'):
+                                    res_dict['request'] = res_dict['request']._asdict()
+                                else:
+                                    res_dict['request'] = str(res_dict['request'])
+                            response["data"] = res_dict
                             response["status"] = "ok"
                             break
                         elif res and res.retcode in [mt5.TRADE_RETCODE_REQUOTE, mt5.TRADE_RETCODE_PRICE_OFF, mt5.TRADE_RETCODE_CONNECTION]:
@@ -209,7 +215,13 @@ def mt5_worker_loop(command_queue, result_queue, login_config):
                             
                             res = mt5.order_send(request)
                             if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                                response["data"] = res._asdict()
+                                res_dict = res._asdict()
+                                if 'request' in res_dict:
+                                    if hasattr(res_dict['request'], '_asdict'):
+                                        res_dict['request'] = res_dict['request']._asdict()
+                                    else:
+                                        res_dict['request'] = str(res_dict['request'])
+                                response["data"] = res_dict
                                 response["status"] = "ok"
                                 break
                             elif res and res.retcode in [mt5.TRADE_RETCODE_REQUOTE, mt5.TRADE_RETCODE_PRICE_OFF, mt5.TRADE_RETCODE_CONNECTION]:
@@ -243,7 +255,13 @@ def mt5_worker_loop(command_queue, result_queue, login_config):
                         # Try to send modification
                         res = mt5.order_send(request)
                         if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                            response["data"] = res._asdict()
+                            res_dict = res._asdict()
+                            if 'request' in res_dict:
+                                if hasattr(res_dict['request'], '_asdict'):
+                                    res_dict['request'] = res_dict['request']._asdict()
+                                else:
+                                    res_dict['request'] = str(res_dict['request'])
+                            response["data"] = res_dict
                             response["status"] = "ok"
                         else:
                             response["error"] = f"{res.comment if res else 'Unknown error'} ({res.retcode if res else 'N/A'})"
