@@ -10,45 +10,43 @@ class StatsService:
         """Fetch raw closed trades from DB for analytics processing."""
         trades = []
         try:
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                query = "SELECT * FROM trades WHERE status = 'CLOSED'"
-                params = []
-                if start_dt:
-                    query += " AND close_time >= ?"
-                    params.append(start_dt.isoformat())
-                if end_dt:
-                    query += " AND close_time <= ?"
-                    params.append(end_dt.isoformat())
+            query = "SELECT * FROM trades WHERE status = 'CLOSED'"
+            params = []
+            if start_dt:
+                query += " AND close_time >= ?"
+                params.append(start_dt.isoformat())
+            if end_dt:
+                query += " AND close_time <= ?"
+                params.append(end_dt.isoformat())
+                
+            query += " ORDER BY close_time ASC LIMIT ?"
+            params.append(limit)
+            
+            from src.domain.models import get_strategy_for_magic, get_asset_class
+            
+            records = await db_pool.execute(query, params, fetch="all", dictionary=True)
+            if records:
+                for row in records:
+                    # Convert to standard Dictionary
+                    tdict = dict(row)
+                    # Ensure profit is float
+                    tdict['profit'] = float(tdict.get('profit') or 0.0)
                     
-                query += " ORDER BY close_time ASC LIMIT ?"
-                params.append(limit)
-                
-                from src.domain.models import get_strategy_for_magic, get_asset_class
-                
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(query.replace('?', '%s'), params)
-                    async for row in cursor:
-                        # Convert to standard Dictionary
-                        tdict = row
-                        # Ensure profit is float
-                        tdict['profit'] = float(tdict.get('profit') or 0.0)
+                    # Dynamically decode Magic Number to Strategy Name to ensure historical accuracy
+                    magic = tdict.get('magic')
+                    strat = get_strategy_for_magic(magic) if magic else "Unknown"
+                    if strat != "Unknown":
+                        tdict['strategy_name'] = strat
+                    else:
+                        db_strat = tdict.get('strategy_name')
+                        if not db_strat or db_strat == "Unknown":
+                            tdict['strategy_name'] = "Unknown"
+                        # Else, keep the original db_strat
                         
-                        # Dynamically decode Magic Number to Strategy Name to ensure historical accuracy
-                        magic = tdict.get('magic')
-                        strat = get_strategy_for_magic(magic) if magic else "Unknown"
-                        if strat != "Unknown":
-                            tdict['strategy_name'] = strat
-                        else:
-                            db_strat = tdict.get('strategy_name')
-                            if not db_strat or db_strat == "Unknown":
-                                tdict['strategy_name'] = "Unknown"
-                            # Else, keep the original db_strat
-                            
-                        # Add dynamic asset class based on symbol
-                        tdict['asset_class'] = get_asset_class(tdict['symbol']).value
+                    # Add dynamic asset class based on symbol
+                    tdict['asset_class'] = get_asset_class(tdict['symbol']).value
 
-                        trades.append(tdict)
+                    trades.append(tdict)
         except Exception as e:
             from src.infrastructure.logger import log
             log.error(f"StatsService: Failed to fetch trades {e}")
@@ -179,73 +177,71 @@ class StatsService:
         
         try:
             import json
-            pool = await db_pool.get_pool()
-            async with pool.acquire() as db:
-                
-                # 1. Funnel Stats
-                funnel_query = "SELECT type, count(*) as count FROM audit_events GROUP BY type"
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(funnel_query)
-                    async for row in cursor:
-                        t = row["type"]
-                        c = row["count"]
-                        if t == "SIGNAL_GENERATED":
-                            metrics["funnel"]["generated"] = c
-                        elif t == "ORDER_DRAFTED":
-                            metrics["funnel"]["drafted"] = c
-                        elif t == "ORDER_APPROVED":
-                            metrics["funnel"]["approved"] = c
-                        elif t == "ORDER_FILLED":
-                            metrics["funnel"]["executed"] = c
-                        elif t == "ORDER_REJECTED":
-                            metrics["funnel"]["rejected_guardian"] = c
+            
+            # 1. Funnel Stats
+            funnel_query = "SELECT type, count(*) as count FROM audit_events GROUP BY type"
+            records = await db_pool.execute(funnel_query, fetch="all", dictionary=True)
+            if records:
+                for row in records:
+                    t = row["type"]
+                    c = row["count"]
+                    if t == "SIGNAL_GENERATED":
+                        metrics["funnel"]["generated"] = c
+                    elif t == "ORDER_DRAFTED":
+                        metrics["funnel"]["drafted"] = c
+                    elif t == "ORDER_APPROVED":
+                        metrics["funnel"]["approved"] = c
+                    elif t == "ORDER_FILLED":
+                        metrics["funnel"]["executed"] = c
+                    elif t == "ORDER_REJECTED":
+                        metrics["funnel"]["rejected_guardian"] = c
 
-                metrics["funnel"]["rejected_arbiter"] = metrics["funnel"]["generated"] - metrics["funnel"]["drafted"]
+            metrics["funnel"]["rejected_arbiter"] = metrics["funnel"]["generated"] - metrics["funnel"]["drafted"]
 
-                # 1b. Strategy Signals
-                metrics["strategy_signals"] = {}
-                strategy_signals_query = "SELECT json_extract(payload_json, '$.strategy_name') as strategy_name, count(*) as count FROM audit_events WHERE type = 'SIGNAL_GENERATED' GROUP BY json_extract(payload_json, '$.strategy_name')"
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(strategy_signals_query)
-                    async for row in cursor:
-                        s_name = row["strategy_name"] or "Unknown"
-                        metrics["strategy_signals"][s_name] = row["count"]
-                
-                # 2. Guardian Rejection Reasons (Pie chart)
-                reject_query = "SELECT json_extract(payload_json, '$.reason') as reason, count(*) as count FROM audit_events WHERE type = 'ORDER_REJECTED' GROUP BY json_extract(payload_json, '$.reason')"
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(reject_query)
-                    async for row in cursor:
-                        reason = row["reason"] or "Unknown"
-                        metrics["guardian_rejections"][reason] = row["count"]
-                            
-                # 3. Scanner Rejection Reasons (Pie chart from the most recent scan)
-                scan_query = "SELECT payload_json FROM audit_events WHERE type = 'UNIVERSE_RANKING_COMPUTED' ORDER BY timestamp DESC LIMIT 1"
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(scan_query)
-                    async for row in cursor:
-                        try:
-                            payload = json.loads(row["payload_json"])
-                            reasons = payload.get("reasons", {})
-                            metrics["scanner_reasons"] = reasons
-                        except:
-                            pass
+            # 1b. Strategy Signals
+            metrics["strategy_signals"] = {}
+            strategy_signals_query = "SELECT json_extract(payload_json, '$.strategy_name') as strategy_name, count(*) as count FROM audit_events WHERE type = 'SIGNAL_GENERATED' GROUP BY json_extract(payload_json, '$.strategy_name')"
+            records = await db_pool.execute(strategy_signals_query, fetch="all", dictionary=True)
+            if records:
+                for row in records:
+                    s_name = row["strategy_name"] or "Unknown"
+                    metrics["strategy_signals"][s_name] = row["count"]
+            
+            # 2. Guardian Rejection Reasons (Pie chart)
+            reject_query = "SELECT json_extract(payload_json, '$.reason') as reason, count(*) as count FROM audit_events WHERE type = 'ORDER_REJECTED' GROUP BY json_extract(payload_json, '$.reason')"
+            records = await db_pool.execute(reject_query, fetch="all", dictionary=True)
+            if records:
+                for row in records:
+                    reason = row["reason"] or "Unknown"
+                    metrics["guardian_rejections"][reason] = row["count"]
+                        
+            # 3. Scanner Rejection Reasons (Pie chart from the most recent scan)
+            scan_query = "SELECT payload_json FROM audit_events WHERE type = 'UNIVERSE_RANKING_COMPUTED' ORDER BY timestamp DESC LIMIT 1"
+            records = await db_pool.execute(scan_query, fetch="all", dictionary=True)
+            if records:
+                for row in records:
+                    try:
+                        payload = json.loads(row["payload_json"])
+                        reasons = payload.get("reasons", {})
+                        metrics["scanner_reasons"] = reasons
+                    except:
+                        pass
 
-                # 4. Live Feed (Latest 50 important events)
-                feed_query = "SELECT timestamp, type, component, severity, payload_json FROM audit_events ORDER BY timestamp DESC LIMIT 50"
-                async with db.cursor(aiomysql.DictCursor) as cursor:
-                    await cursor.execute(feed_query)
-                    async for row in cursor:
-                        try:
-                            metrics["feed"].append({
-                                "timestamp": row["timestamp"],
-                                "type": row["type"],
-                                "component": row["component"],
-                                "severity": row["severity"],
-                                "payload": json.loads(row["payload_json"])
-                            })
-                        except:
-                            pass
+            # 4. Live Feed (Latest 50 important events)
+            feed_query = "SELECT timestamp, type, component, severity, payload_json FROM audit_events ORDER BY timestamp DESC LIMIT 50"
+            records = await db_pool.execute(feed_query, fetch="all", dictionary=True)
+            if records:
+                for row in records:
+                    try:
+                        metrics["feed"].append({
+                            "timestamp": row["timestamp"],
+                            "type": row["type"],
+                            "component": row["component"],
+                            "severity": row["severity"],
+                            "payload": json.loads(row["payload_json"])
+                        })
+                    except:
+                        pass
                             
         except Exception as e:
             from src.infrastructure.logger import log
