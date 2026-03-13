@@ -46,6 +46,17 @@ class StatsService:
                     # Add dynamic asset class based on symbol
                     tdict['asset_class'] = get_asset_class(tdict['symbol']).value
 
+                    # Parse market_context if exists for Post-Mortem features
+                    ctx = tdict.get('market_context')
+                    if ctx:
+                        try:
+                            import json
+                            tdict['market_context'] = json.loads(ctx)
+                        except:
+                            tdict['market_context'] = {}
+                    else:
+                        tdict['market_context'] = {}
+
                     trades.append(tdict)
         except Exception as e:
             from src.infrastructure.logger import log
