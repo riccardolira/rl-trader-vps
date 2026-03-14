@@ -34,6 +34,13 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# --- Admin Auth Dependency (I1) ---
+def require_admin_key(x_api_key: str = Header(None)):
+    """Protege endpoints admin com X-Api-Key. Configurável via ADMIN_API_KEY no .env."""
+    expected = getattr(settings, "ADMIN_API_KEY", None)
+    if expected and x_api_key != expected:
+        raise HTTPException(status_code=403, detail="Forbidden: invalid or missing X-Api-Key header")
+
 # --- REST Endpoints ---
 
 # /health removido — endpoint completo está em routes_health.py (com MT5 + disk + time skew)
