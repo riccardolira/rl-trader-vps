@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Settings, Square, Zap, Menu, Play } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Moon, Sun, Settings, Square, Zap, Play, Radar, Cpu, BarChart3, ScrollText, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
 import { api } from '../../services/api';
+import { Link, useLocation } from 'react-router-dom';
 import type { UniverseConfig, EngineState } from '../../services/api';
 
 interface TopbarProps {
@@ -13,55 +14,75 @@ interface TopbarProps {
     onMenuToggle: () => void;
 }
 
-export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpen, onMenuToggle }) => {
-    const { theme, setTheme } = useTheme();
-    const [mt5Config, setMt5Config] = useState<{ login: string, server: string } | null>(null);
+interface SessionStats {
+    daily_pnl: number;
+    heat_pct: number;
+    heat_usd: number;
+}
 
-    // Global controls state
+const NAV_ITEMS = [
+    { id: 'scanner',    path: '/scanner',    label: 'Scanner',   icon: Radar },
+    { id: 'operations', path: '/operations', label: 'Motor',     icon: Cpu },
+    { id: 'analytics',  path: '/analytics',  label: 'Analytics', icon: BarChart3 },
+    { id: 'logs',       path: '/logs',       label: 'Logs',      icon: ScrollText },
+];
+
+export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpen }) => {
+    const { theme, setTheme } = useTheme();
+    const location = useLocation();
+    const activeRoute = location.pathname.split('/')[1] || 'scanner';
+
+    const [mt5Config, setMt5Config] = useState<{ login: string; server: string } | null>(null);
     const [config, setConfig] = useState<UniverseConfig | null>(null);
     const [engineState, setEngineState] = useState<EngineState | null>(null);
     const [isTogglingScanner, setIsTogglingScanner] = useState(false);
     const [isTogglingEngine, setIsTogglingEngine] = useState(false);
+    const [isPanicking, setIsPanicking] = useState(false);
+    const [session, setSession] = useState<SessionStats>({ daily_pnl: 0, heat_pct: 0, heat_usd: 0 });
+
+    // Fetch global status (engine, scanner)
+    const fetchStatus = useCallback(async () => {
+        const [configRes, stateRes] = await Promise.all([
+            api.get<UniverseConfig>('/api/universe/config').catch(() => null),
+            api.get<EngineState>('/api/state').catch(() => null),
+        ]);
+        if (configRes) setConfig(configRes);
+        if (stateRes) setEngineState(stateRes);
+    }, []);
+
+    // Fetch session stats (P&L diário + Portfolio Heat)
+    const fetchSession = useCallback(async () => {
+        const [heatRes, analyticsRes] = await Promise.all([
+            fetch('/api/analytics/portfolio-heat').then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch('/api/analytics/dashboard').then(r => r.ok ? r.json() : null).catch(() => null),
+        ]);
+        setSession({
+            daily_pnl: analyticsRes?.metrics?.total_profit_today ?? 0,
+            heat_pct: heatRes?.heat_pct ?? 0,
+            heat_usd: heatRes?.heat_usd ?? 0,
+        });
+    }, []);
 
     useEffect(() => {
-        // Fetch config initially and when settings modal closes (to catch updates)
-        if (!isSettingsOpen) {
-            fetch('/api/config/mt5')
-                .then(res => {
-                    if (res.ok) return res.json();
-                    throw new Error('Network response was not ok');
-                })
-                .then(data => {
-                    if (data.login && data.server) {
-                        setMt5Config({ login: data.login.toString(), server: data.server });
-                    }
-                })
-                .catch(err => console.error("Failed to fetch MT5 config for topbar", err));
-        }
+        fetch('/api/config/mt5').then(r => r.ok ? r.json() : null).then(d => {
+            if (d?.login && d?.server) setMt5Config({ login: d.login.toString(), server: d.server });
+        }).catch(() => {});
     }, [isSettingsOpen]);
 
     useEffect(() => {
-        const fetchGlobalStatus = async () => {
-            const configRes = await api.get<UniverseConfig>('/api/universe/config').catch(() => null);
-            if (configRes) setConfig(configRes);
-            const stateRes = await api.get<EngineState>('/api/state').catch(() => null);
-            if (stateRes) setEngineState(stateRes);
-        };
-        fetchGlobalStatus();
-        const interval = setInterval(fetchGlobalStatus, 5000);
-        return () => clearInterval(interval);
-    }, []);
+        fetchStatus();
+        fetchSession();
+        const statusInterval = setInterval(fetchStatus, 5000);
+        const sessionInterval = setInterval(fetchSession, 10000);
+        return () => { clearInterval(statusInterval); clearInterval(sessionInterval); };
+    }, [fetchStatus, fetchSession]);
 
     const toggleScanner = async () => {
         if (!config) return;
         setIsTogglingScanner(true);
         const endpoint = config.scanner_enabled ? '/api/universe/scanner/stop' : '/api/universe/scanner/start';
-        try {
-            await api.post(endpoint, {});
-            setConfig(prev => prev ? { ...prev, scanner_enabled: !config.scanner_enabled } : prev);
-        } finally {
-            setIsTogglingScanner(false);
-        }
+        try { await api.post(endpoint, {}); setConfig(prev => prev ? { ...prev, scanner_enabled: !config.scanner_enabled } : prev); }
+        finally { setIsTogglingScanner(false); }
     };
 
     const toggleEngine = async () => {
@@ -72,105 +93,160 @@ export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpe
             await api.post(endpoint, {});
             const res = await api.get<EngineState>('/api/state').catch(() => null);
             if (res) setEngineState(res);
-        } finally {
-            setIsTogglingEngine(false);
-        }
+        } finally { setIsTogglingEngine(false); }
     };
 
+    const triggerPanic = async () => {
+        if (!window.confirm('⚠️ PANIC KILL — Fechar TODAS as posições abertas agora?')) return;
+        setIsPanicking(true);
+        try { await api.post('/api/engine/panic', {}); }
+        finally { setTimeout(() => setIsPanicking(false), 3000); }
+    };
+
+    // Heat color
+    const heatColor = session.heat_pct > 5 ? 'text-rose-500' : session.heat_pct > 3 ? 'text-amber-500' : 'text-emerald-500';
+    const heatBg   = session.heat_pct > 5 ? 'bg-rose-500/10 border-rose-500/20' : session.heat_pct > 3 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-emerald-500/10 border-emerald-500/20';
+
+    const pnlPositive = session.daily_pnl >= 0;
+
     return (
-        <header className="h-16 border-b border-border/50 bg-card/40 backdrop-blur-2xl flex items-center justify-between px-4 md:px-6 z-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-3 md:gap-5">
-                {/* Mobile Hamburger Menu */}
-                <button
-                    onClick={onMenuToggle}
-                    className="md:hidden p-2 rounded-lg hover:bg-muted/50 text-foreground transition-colors"
-                    aria-label="Toggle menu"
-                >
-                    <Menu size={24} />
-                </button>
+        <header className="shrink-0 border-b border-border/50 bg-card/60 backdrop-blur-2xl z-20 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
 
-                {/* Connection Status & Telemetry Button */}
-                <button className="flex items-center gap-2.5 px-3 py-1.5 bg-muted/20 border border-border/50 hover:bg-muted/40 hover:border-border/80 transition-colors rounded-lg shadow-sm group">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 group-hover:bg-emerald-400 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.7)] shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all"></span>
-                    <span className="text-[11px] text-foreground/90 font-mono font-bold tracking-widest flex items-center gap-2">
-                        {mt5Config ? `${mt5Config.login} • ${mt5Config.server}` : 'API ...'}
-                        <Zap size={12} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                    </span>
-                </button>
-            </div>
+            {/* ── Linha 1: Logo + Controles + Status ── */}
+            <div className="h-14 flex items-center justify-between px-4 md:px-6 gap-4">
 
-            <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 mr-3">
+                {/* Logo */}
+                <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-blue-600/10 border border-blue-500/20 flex items-center justify-center">
+                        <span className="text-blue-400 font-black text-sm tracking-tighter">RL</span>
+                    </div>
+                    <div className="hidden sm:flex flex-col">
+                        <span className="font-bold text-foreground text-sm leading-tight">RL Trader</span>
+                        <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Control Tower</span>
+                    </div>
+                </div>
+
+                {/* ── Status chips: MT5 + P&L + Heat ── */}
+                <div className="flex items-center gap-2 flex-1 justify-center overflow-x-auto hide-scrollbar">
+                    {/* MT5 Chip */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/20 border border-border/40 text-[11px] font-mono font-semibold text-foreground/70 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)] animate-pulse" />
+                        {mt5Config ? `${mt5Config.login}` : 'MT5'}
+                    </div>
+
+                    {/* P&L Diário */}
+                    <div className={cn(
+                        "flex items-center gap-1 px-2.5 py-1 rounded-md border text-[11px] font-bold shrink-0",
+                        pnlPositive ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                    )}>
+                        {pnlPositive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                        {pnlPositive ? '+' : ''}{session.daily_pnl.toFixed(2)} hoje
+                    </div>
+
+                    {/* Portfolio Heat */}
+                    {session.heat_pct > 0 && (
+                        <div className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md border text-[11px] font-bold shrink-0", heatBg, heatColor)}>
+                            {session.heat_pct > 4 && <AlertTriangle size={11} />}
+                            Heat {session.heat_pct.toFixed(1)}%
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Controles: Scanner / Engine / Panic / Theme / Config ── */}
+                <div className="flex items-center gap-1.5 shrink-0">
                     {/* Scanner Toggle */}
                     <button
                         onClick={toggleScanner}
                         disabled={isTogglingScanner || !config}
+                        title={config?.scanner_enabled ? 'Stop Scanner' : 'Start Scanner'}
                         className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] uppercase tracking-wider font-bold transition-all duration-200",
-                            !config ? "border-transparent text-muted-foreground opacity-50 cursor-not-allowed"
-                                : config.scanner_enabled
-                                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20 hover:shadow-md"
-                                    : "bg-surface text-muted-foreground border-border/50 hover:bg-muted/50 hover:text-foreground hover:border-border hover:-translate-y-px"
+                            "hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-md border text-[10px] uppercase tracking-wider font-bold transition-all",
+                            config?.scanner_enabled
+                                ? "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+                                : "text-muted-foreground border-border/40 hover:bg-muted/50 hover:text-foreground"
                         )}
-                        title={config?.scanner_enabled ? "Stop Scanner" : "Start Scanner"}
                     >
-                        {config?.scanner_enabled ? (
-                            <><Square size={12} fill="currentColor" /> Stop Scanner</>
-                        ) : (
-                            <><Play size={12} fill="currentColor" /> Start Scanner</>
-                        )}
+                        {config?.scanner_enabled ? <><Square size={10} fill="currentColor" /> Scanner</> : <><Play size={10} fill="currentColor" /> Scanner</>}
                     </button>
 
                     {/* Engine Toggle */}
                     <button
                         onClick={toggleEngine}
                         disabled={isTogglingEngine || !engineState}
+                        title={engineState?.strategy_engine?.running ? 'Stop Engine' : 'Start Engine'}
                         className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] uppercase tracking-wider font-bold transition-all duration-200",
-                            !engineState ? "border-transparent text-muted-foreground opacity-50 cursor-not-allowed"
-                                : engineState.strategy_engine?.running
-                                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20 hover:shadow-md"
-                                    : "bg-surface text-muted-foreground border-border/50 hover:bg-muted/50 hover:text-foreground hover:border-border hover:-translate-y-px"
+                            "hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-md border text-[10px] uppercase tracking-wider font-bold transition-all",
+                            engineState?.strategy_engine?.running
+                                ? "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+                                : "text-muted-foreground border-border/40 hover:bg-muted/50 hover:text-foreground"
                         )}
-                        title={engineState?.strategy_engine?.running ? "Stop Engine" : "Start Engine"}
                     >
-                        <Zap size={14} className={cn(engineState?.strategy_engine?.running ? "animate-pulse" : "")} />
-                        {isTogglingEngine ? '...' : (engineState?.strategy_engine?.running ? 'Stop Engine' : 'Start Engine')}
+                        <Zap size={11} className={engineState?.strategy_engine?.running ? 'animate-pulse' : ''} />
+                        {isTogglingEngine ? '...' : 'Engine'}
+                    </button>
+
+                    {/* PANIC */}
+                    <button
+                        onClick={triggerPanic}
+                        disabled={isPanicking}
+                        className={cn(
+                            "flex items-center gap-1 px-3 py-1.5 rounded-md border text-[10px] uppercase tracking-wider font-black transition-all",
+                            isPanicking
+                                ? "bg-rose-900 text-rose-200 border-rose-700 cursor-not-allowed animate-pulse"
+                                : "bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-[0_0_12px_rgba(225,29,72,0.35)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] hover:-translate-y-px"
+                        )}
+                    >
+                        <Square size={10} fill="currentColor" />
+                        {isPanicking ? 'KILLING...' : 'PANIC'}
+                    </button>
+
+                    <div className="h-6 w-px bg-border/40 mx-1" />
+
+                    {/* Theme toggle */}
+                    <button
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Alternar tema"
+                    >
+                        <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                        <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    </button>
+
+                    {/* Settings */}
+                    <button
+                        onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                        className={cn(
+                            "w-8 h-8 flex items-center justify-center rounded-md transition-colors border",
+                            isSettingsOpen ? 'bg-primary/10 text-primary border-primary/20' : 'border-transparent hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                        )}
+                        title="Configurações"
+                    >
+                        <Settings size={16} />
                     </button>
                 </div>
-
-                {/* PANIC BUTTON */}
-                <button
-                    onClick={() => {
-                        // TODO: Implement Panic endpoint call
-                        console.warn("PANIC TRIGGERED");
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-1.5 mr-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_15px_rgba(225,29,72,0.4)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] border border-rose-500 text-[11px] uppercase tracking-wider font-bold transition-all duration-200 hover:-translate-y-px"
-                    title="Stop all operations immediately"
-                >
-                    <Square size={12} fill="currentColor" /> Panic T-Kill
-                </button>
-
-                <div className="h-7 w-px bg-border/50 mx-2" />
-
-                <button
-                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                    className="relative flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 text-muted-foreground/80 hover:text-foreground transition-colors border border-transparent hover:border-border/50"
-                    title="Toggle Theme"
-                >
-                    <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <span className="sr-only">Toggle theme</span>
-                </button>
-
-                <button
-                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                    className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors border ${isSettingsOpen ? 'bg-primary/10 text-primary border-primary/20 shadow-sm' : 'border-transparent hover:bg-muted/50 text-muted-foreground/80 hover:text-foreground hover:border-border/50'}`}
-                    title="Configurações"
-                >
-                    <Settings size={18} />
-                </button>
             </div>
+
+            {/* ── Linha 2: Tabs de navegação ── */}
+            <nav className="flex items-end px-4 md:px-6 gap-1 border-t border-border/30">
+                {NAV_ITEMS.map(({ id, path, label, icon: Icon }) => {
+                    const isActive = activeRoute === id || (id === 'scanner' && activeRoute === '');
+                    return (
+                        <Link
+                            key={id}
+                            to={path}
+                            className={cn(
+                                "flex items-center gap-1.5 px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 border-b-2 -mb-px whitespace-nowrap",
+                                isActive
+                                    ? "border-blue-500 text-blue-400"
+                                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                            )}
+                        >
+                            <Icon size={13} />
+                            {label}
+                        </Link>
+                    );
+                })}
+            </nav>
         </header>
     );
 };

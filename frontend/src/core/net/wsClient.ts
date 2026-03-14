@@ -4,6 +4,15 @@ import { WS_URL } from '../../services/config';
 
 export type WsStatus = 'connecting' | 'open' | 'closed' | 'error';
 
+// Eventos de alta prioridade — nunca são throttled
+const HIGH_PRIORITY_TYPES = new Set([
+  'SIGNAL_GENERATED', 'ORDER_APPROVED', 'ORDER_REJECTED',
+  'TRADE_OPENED', 'TRADE_CLOSED', 'PANIC_KILL', 'CIRCUIT_BREAKER_TRIGGERED',
+  'ALERT', 'LIVE_POSITION_UPDATE'
+]);
+
+const THROTTLE_MS = 500; // Agrupa mensagens do mesmo tipo em janelas de 500ms
+
 class WsClient {
     private ws: WebSocket | null = null;
     private url: string;
@@ -13,33 +22,30 @@ class WsClient {
     public msgCount: number = 0;
     public isStale: boolean = false;
 
-    // For react hooks (connection status)
     private listeners: Set<() => void> = new Set();
-
-    // For payload data
     private dataListeners: Set<(data: any) => void> = new Set();
 
     private staleTimer: ReturnType<typeof setTimeout> | null = null;
-    private readonly STALE_THRESHOLD_MS = 15000;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    private readonly STALE_THRESHOLD_MS = 15000;
+
+    // Throttle: guarda última mensagem por tipo + timer pendente
+    private throttleQueues: Map<string, { data: any; timer: ReturnType<typeof setTimeout> }> = new Map();
 
     constructor() {
-        // Assume default WS_URL from config or hardcode the v3 default
-        // In this project it seems to be ws://localhost:8001/ws as per services/config.ts
         this.url = typeof WS_URL !== 'undefined' ? WS_URL : 'ws://localhost:8001/ws';
     }
 
     public connect() {
         if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-            return; // Already connecting or open
+            return;
         }
-
         this.updateStatus('connecting');
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
             this.updateStatus('open');
-            eventStore.emit('INFO', 'WS', 'WS_OPEN', `Conectado ao WebSocket em ${this.url}`);
+            eventStore.emit('INFO', 'WS', 'WS_OPEN', `Conectado em ${this.url}`);
             this.resetStaleTimer();
         };
 
@@ -63,6 +69,9 @@ class WsClient {
     public disconnect() {
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
         this.clearStaleTimer();
+        // Limpa throttle queue pendente
+        this.throttleQueues.forEach(q => clearTimeout(q.timer));
+        this.throttleQueues.clear();
         if (this.ws) {
             this.ws.close();
             this.ws = null;
@@ -74,57 +83,73 @@ class WsClient {
         this.msgCount++;
         this.resetStaleTimer();
 
-        let data;
+        let data: any;
         try {
             data = JSON.parse(rawData);
         } catch (e) {
-            eventStore.emit('ERROR', 'WS', 'CONTRACT_ERROR', 'Falha no parse JSON via WS', rawData.substring(0, 100));
+            eventStore.emit('ERROR', 'WS', 'CONTRACT_ERROR', 'Falha no parse JSON', rawData.substring(0, 100));
             this.notify();
             return;
         }
 
-        // Optionally emit every message to eventStore
-        // Be careful not to flood it with too many tick events
-        if (data && data.type !== 'ping') {
-            eventStore.emit('INFO', 'WS', 'WS_MESSAGE', `Mensagem WS: ${data.type || 'unknown'}`, data.type);
+        if (!guardWsEnvelope(data)) {
+            this.notify();
+            return;
         }
 
-        // Guard Contract!
-        if (guardWsEnvelope(data)) {
+        const msgType: string = data.type || 'unknown';
+
+        // Alta prioridade: dispara imediatamente, sem throttle
+        if (HIGH_PRIORITY_TYPES.has(msgType)) {
+            if (msgType !== 'ping') {
+                eventStore.emit('INFO', 'WS', 'WS_MESSAGE', `[PRIORITY] ${msgType}`, msgType);
+            }
             this.notifyData(data);
+            this.notify();
+            return;
         }
 
-        this.notify();
+        // Throttle: agrupa mensagens do mesmo tipo em janelas de 500ms
+        const existing = this.throttleQueues.get(msgType);
+        if (existing) {
+            // Atualiza o dado mais recente mas mantém o timer
+            existing.data = data;
+        } else {
+            const timer = setTimeout(() => {
+                const queued = this.throttleQueues.get(msgType);
+                if (queued) {
+                    this.throttleQueues.delete(msgType);
+                    this.notifyData(queued.data);
+                    this.notify();
+                }
+            }, THROTTLE_MS);
+            this.throttleQueues.set(msgType, { data, timer });
+        }
     }
 
     private resetStaleTimer() {
         this.clearStaleTimer();
         if (this.isStale) {
             this.isStale = false;
-            eventStore.emit('INFO', 'WS', 'WS_STALE', 'Conexão WS se recuperou (não mais estagnada)');
             this.notify();
         }
-
         this.staleTimer = setTimeout(() => {
             this.isStale = true;
-            eventStore.emit('WARN', 'WS', 'WS_STALE', `WebSocket sem mensagens há mais de ${this.STALE_THRESHOLD_MS}ms`);
+            eventStore.emit('WARN', 'WS', 'WS_STALE', `Sem mensagens há ${this.STALE_THRESHOLD_MS}ms`);
             this.notify();
         }, this.STALE_THRESHOLD_MS);
     }
 
     private clearStaleTimer() {
-        if (this.staleTimer) {
-            clearTimeout(this.staleTimer);
-            this.staleTimer = null;
-        }
+        if (this.staleTimer) { clearTimeout(this.staleTimer); this.staleTimer = null; }
     }
 
     private scheduleReconnect() {
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
         this.reconnectTimer = setTimeout(() => {
-            eventStore.emit('INFO', 'WS', 'WS_OPEN', 'Tentando reconectar WS...');
+            eventStore.emit('INFO', 'WS', 'WS_OPEN', 'Reconectando WS...');
             this.connect();
-        }, 5000); // 5s backoff
+        }, 5000);
     }
 
     private updateStatus(newStatus: WsStatus) {
@@ -137,18 +162,14 @@ class WsClient {
         return () => this.listeners.delete(listener);
     }
 
-    private notify() {
-        this.listeners.forEach(l => l());
-    }
+    private notify() { this.listeners.forEach(l => l()); }
 
     public subscribeData(listener: (data: any) => void) {
         this.dataListeners.add(listener);
         return () => this.dataListeners.delete(listener);
     }
 
-    private notifyData(data: any) {
-        this.dataListeners.forEach(l => l(data));
-    }
+    private notifyData(data: any) { this.dataListeners.forEach(l => l(data)); }
 }
 
 export const wsClient = new WsClient();
