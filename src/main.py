@@ -32,8 +32,6 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup_event():
         log.info("FastAPI Starting up...")
-        from src.services.health.guardian_service import guardian_service
-        asyncio.create_task(guardian_service.start())
         asyncio.create_task(engine.boot())
         
     @app.on_event("shutdown")

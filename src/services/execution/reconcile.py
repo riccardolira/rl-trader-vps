@@ -106,22 +106,12 @@ class Reconciler:
                             total_profit = sum(d.get("profit", 0.0) + d.get("commission", 0.0) + d.get("swap", 0.0) for d in out_deals)
                             side = OrderSide.BUY if in_d.get("type") == 0 else OrderSide.SELL
                             
-                            sym_upper = in_d.get("symbol", "").upper()
-                            asset_class = "UNKNOWN"
-                            if "BTC" in sym_upper or "ETH" in sym_upper or "SOL" in sym_upper:
-                                asset_class = "CRYPTO"
-                            elif any(k in sym_upper for k in ["US30", "USA30", "US100", "NAS", "GER40", "UK100", "SPX", "WIN", "US500", "USTEC", "DE30", "FRA40", "HK50"]):
-                                asset_class = "INDICES"
-                            elif any(k in sym_upper for k in ["XAU", "XAG", "GOLD", "SILVER", "PLAT", "PALL"]):
-                                asset_class = "METALS"
-                            elif any(k in sym_upper for k in ["OIL", "WTI", "BRENT", "NATGAS", "GAS", "CORN", "SOY", "SUGAR", "WHEAT"]):
-                                asset_class = "COMMODITIES"
-                            elif any(char.isdigit() for char in sym_upper) and len(sym_upper) >= 5:
-                                asset_class = "STOCKS_BR"
-                            elif len(sym_upper.replace("-T", "").replace(".T", "")) <= 4:
-                                asset_class = "STOCKS_US"
-                            else:
-                                asset_class = "FOREX"
+                            # Usa a função centralizada do domínio — evita heurística duplicada e inconsistente
+                            from src.domain.models import get_asset_class as _get_asset_class
+                            raw_symbol = in_d.get("symbol", "")
+                            # Remove sufixo do broker para classificar corretamente
+                            clean_sym = raw_symbol.replace("-T", "").replace(".T", "").replace("#", "")
+                            asset_class = _get_asset_class(clean_sym).value
                                 
                             strategy_name = get_strategy_for_magic(in_d.get("magic", 0))
                             

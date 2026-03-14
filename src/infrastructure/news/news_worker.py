@@ -166,8 +166,12 @@ class NewsWorker:
         for ev in self.events_cache:
             currency = ev.currency.upper()
             
-            # Check if news currency is either in the symbol name directly, or matches a mapped macro currency
-            affects_symbol = (currency in sym_upper) or (currency in effective_currencies)
+            # "ALL" significa feriado global — afeta todos os símbolos
+            if currency == "ALL":
+                affects_symbol = True
+            else:
+                # Check if news currency is either in the symbol name directly, or matches a mapped macro currency
+                affects_symbol = (currency in sym_upper) or (currency in effective_currencies)
             
             if not affects_symbol:
                 continue

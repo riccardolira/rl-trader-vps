@@ -36,9 +36,7 @@ manager = ConnectionManager()
 
 # --- REST Endpoints ---
 
-@router.get("/health")
-async def health_check():
-    return {"status": "ok", "project": settings.PROJECT_NAME, "env": settings.ENV}
+# /health removido — endpoint completo está em routes_health.py (com MT5 + disk + time skew)
 
 @router.get("/api/state")
 async def get_state():
@@ -276,5 +274,12 @@ async def broadcast_event_to_ws(event):
     except Exception as e:
         log.error(f"WS Broadcast error: {e}")
 
-# Subscribe WS broadcaster to EventBus
-event_bus.subscribe("*", broadcast_event_to_ws)
+def setup_ws_subscriber():
+    """Registra o broadcaster de WS no EventBus. Chamar apenas uma vez no startup."""
+    # Verifica se já foi registrado para evitar subscribe duplo em hot-reload
+    if broadcast_event_to_ws not in event_bus._global_subscribers:
+        event_bus.subscribe("*", broadcast_event_to_ws)
+        log.info("WS broadcaster registered in EventBus.")
+
+# Chamado pelo startup_event em main.py via setup_ws_subscriber()
+setup_ws_subscriber()

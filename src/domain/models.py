@@ -170,7 +170,6 @@ class Order(BaseModel):
     risk_snapshot: Optional[RiskSnapshot] = None
     status: OrderStatus = OrderStatus.CREATED
     broker_ticket: Optional[int] = None
-    broker_ticket: Optional[int] = None
     execution_time: Optional[datetime] = None
     error_message: Optional[str] = None
     market_context: Optional[dict] = None

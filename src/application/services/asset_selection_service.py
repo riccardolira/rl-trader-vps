@@ -17,10 +17,6 @@ from src.infrastructure.mt5_adapter import mt5_adapter
 from src.infrastructure.news.news_worker import news_worker
 from .market_data_service import market_data_service
 import numpy as np
-from src.domain.events import BaseEvent
-from src.infrastructure.mt5_adapter import mt5_adapter
-from src.infrastructure.news.news_worker import news_worker
-from .market_data_service import market_data_service
 
 class AssetSelectionService:
     """

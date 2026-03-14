@@ -27,20 +27,21 @@ class EventBus(IEventBus):
             log.warning(f"EventBus received event without type: {event}")
             return
 
-        # 1. Notify specific subscribers
+        # 1. Notify specific subscribers — em paralelo para não bloquear WS
         if event_type in self._subscribers:
             for handler in self._subscribers[event_type]:
-                try:
-                    await handler(event)
-                except Exception as e:
-                    log.error(f"Error handling event {event_type}: {e}")
+                asyncio.create_task(self._safe_call(handler, event, event_type))
 
-        # 2. Notify global subscribers (Audit Log)
+        # 2. Notify global subscribers (Audit Log + WS) — também em paralelo
         for handler in self._global_subscribers:
-            try:
-                await handler(event)
-            except Exception as e:
-                log.error(f"Error in global handler for {event_type}: {e}")
+            asyncio.create_task(self._safe_call(handler, event, event_type))
+
+    async def _safe_call(self, handler: Callable, event: Any, event_type: str):
+        """Chama um handler com tratamento de exceção isolado."""
+        try:
+            await handler(event)
+        except Exception as e:
+            log.error(f"EventBus handler error [{event_type}] {getattr(handler, '__name__', handler)}: {e}")
 
 # Global instance
 event_bus = EventBus()

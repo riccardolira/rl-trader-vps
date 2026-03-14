@@ -120,6 +120,9 @@ class SMCStrategy(IStrategy):
                 score_regime_fit = 40.0 # Often precedes a strong move
                 score_signal -= 20.0
                 reason = "SMC_NEUTRAL"
+            
+            # Protege contra score_signal negativo após penalidades
+            score_signal = max(0.0, score_signal)
 
         # 4. Microstructure Penalty
         penalty_micro = 0.0

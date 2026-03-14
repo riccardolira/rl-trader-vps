@@ -100,17 +100,23 @@ class OrderFlowStrategy(IStrategy):
         # 3. Regime Fit (Momentum/Scalping is best in Trends)
         score_regime_fit = 0.0
         
-        # Check News Context
+        # Check News Context — filtra apenas eventos que afetam as moedas do símbolo
         now = datetime.utcnow()
         today_str = now.strftime("%Y-%m-%d")
         news_threat = False
+        sym_upper = context.symbol.upper().replace("-T", "").replace(".T", "")
         
-        # If we have any High-Impact news today matching the symbol, we allow RANGE spikes.
         for ev in news_worker.events_cache:
             if ev.date_str == today_str and ev.impact == "High":
-                 # Not a perfect currency match, but overall volatility wrapper
-                 news_threat = True
-                 break
+                currency = ev.currency.upper()
+                # Feriado global afeta tudo
+                if currency == "ALL":
+                    news_threat = True
+                    break
+                # Verifica se a moeda do evento está no símbolo (ex: "USD" in "EURUSD")
+                if currency in sym_upper:
+                    news_threat = True
+                    break
 
         if context.regime == RegimeType.STRONG_TREND:
             score_regime_fit = 100.0 # Flow in strong trend = Continuation explosion

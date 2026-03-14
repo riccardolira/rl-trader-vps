@@ -156,8 +156,9 @@ class StrategyEngine:
                 # If runner_up is an advanced strategy and winner is a basic one,
                 # the advanced strategy steals the win due to its high precision and rarity.
                 if runner_up.strategy_name in advanced_strategies and winner.strategy_name in basic_strategies:
+                     prev_winner_name = winner.strategy_name
                      winner = runner_up
-                     log.info(f"StrategyEngine: Tie-Break! {symbol} -> {runner_up.strategy_name} steals win from {winner.strategy_name} (Advanced Priority).")
+                     log.info(f"StrategyEngine: Tie-Break! {symbol} -> {winner.strategy_name} steals win from {prev_winner_name} (Advanced Priority).")
                      
                 # What if the WINNER is already an advanced strategy, and runner up is basic?
                 # It naturally wins because its score was higher anyway.

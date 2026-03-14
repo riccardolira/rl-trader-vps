@@ -18,7 +18,7 @@ class BreakoutStrategy(IStrategy):
         squeeze_pct = context.indicators.get('squeeze_pct')
         
         # Guard: Missing Data
-        if bb_upper is None or squeeze_pct is None:
+        if bb_upper is None or bb_lower is None or squeeze_pct is None:
             return StrategyCandidate(
                 symbol=context.symbol,
                 strategy_name=self.name,

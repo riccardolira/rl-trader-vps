@@ -34,15 +34,18 @@ class MarketDataService:
             if point is None:
                 info = await asyncio.to_thread(mt5_adapter.mt5_worker_client.send_command, "get_symbol_info", args=[symbol])
                 if info:
-                    point = info.get("point")
-                    tick_value = info.get("trade_tick_value")
-                    self._point_cache[symbol] = (point, tick_value)
+                    point_val = info.get("point") or 0.00001
+                    tick_val = info.get("trade_tick_value") or 0.0
+                    self._point_cache[symbol] = (point_val, tick_val)
                 else:
                     log.warning(f"MarketDataService: Could not fetch symbol info for {symbol}. Defaulting point=0.00001")
-                    point = 0.00001
-                    tick_value = 0.0
+                    point_val = 0.00001
+                    tick_val = 0.0
+                    # Salva como tupla para que o unpack no próximo acesso funcione corretamente
+                    self._point_cache[symbol] = (point_val, tick_val)
+                point, tick_value = point_val, tick_val
             else:
-                 point, tick_value = point # Unpack tuple
+                 point, tick_value = point  # Unpack tuple
             
             # 1. Fetch History (Last 200 bars, min 100 for Squeeze calculation)
             rates = await asyncio.to_thread(
