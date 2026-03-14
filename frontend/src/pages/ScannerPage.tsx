@@ -6,6 +6,7 @@ import { MarketSchedulesView } from '../components/universe/MarketSchedulesView'
 import { CriteriaEditor } from '../components/universe/CriteriaEditor';
 import { EconomicCalendar } from '../components/universe/EconomicCalendar';
 import { ScannerFiltersView } from '../components/universe/ScannerFiltersView';
+import { DaySessionCard } from '../components/common/DaySessionCard';
 import { api } from '../services/api';
 import type { UniverseSnapshot, RankingRow, UniverseConfig } from '../services/api';
 import { Layers, ListFilter, Settings, AlertTriangle, Activity, Calendar } from 'lucide-react';
@@ -257,6 +258,9 @@ export const ScannerPage = () => {
                     Ver Diagnostics Completo &rarr;
                 </button>
             </div>
+
+            {/* Card de Sessão do Dia */}
+            <DaySessionCard />
 
             {/* UX Watchdog Banner */}
             <WatchdogBanner wdState={wdState} wsState={wsState} isRestFallbackActive={isRestFallbackActive} />

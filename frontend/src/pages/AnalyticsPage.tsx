@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Target, TrendingUp, Clock, ShieldAlert, Cpu, Lightbulb, BarChart2, Calendar } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { PerformanceBar } from '../components/common/PerformanceBar';
 import { TradeHistory } from '../components/operations/TradeHistory';
 import { BarChart, Bar, CartesianGrid as BarCartesianGrid, Tooltip as BarTooltip, XAxis as BarXAxis, YAxis as BarYAxis, Legend } from 'recharts';
 import { ShieldCheck } from 'lucide-react';
@@ -218,7 +219,10 @@ export const AnalyticsPage: React.FC = () => {
                     <p className="text-sm text-muted-foreground mt-1">Inteligência Matemática, Ledger e Recomendações</p>
                 </div>
 
-                <div className="flex gap-2 items-center">
+                <div className="flex flex-col gap-2 items-end">
+                    {/* Métricas profissionais (Sharpe, Sortino, Win Rate, R/R) */}
+                    <PerformanceBar />
+
                     {/* Global Date Filter Bar */}
                     <div className="flex items-center gap-2 bg-card border border-border/50 p-1.5 rounded-full shadow-sm">
                         <Calendar size={16} className="text-muted-foreground ml-3" />
