@@ -63,11 +63,15 @@ class StrategyConfigService:
                 config.strategies[name] = default_cfg
                 needs_save = True
             else:
-                # Merge missing parameters into the user's existing strategy config
+                # SCS1 FIX: Merge parameter-a-parameter — adiciona novos parâmetros do default
+                # sem sobrescrever os valores que o usuário já configurou no dashboard.
+                # Antes: só fazia merge se parameters estava COMPLETAMENTE vazio.
                 current_cfg = config.strategies[name]
-                if not current_cfg.parameters and default_cfg.parameters:
-                    current_cfg.parameters = default_cfg.parameters
-                    needs_save = True
+                for param_key, param_default_val in default_cfg.parameters.items():
+                    if param_key not in current_cfg.parameters:
+                        current_cfg.parameters[param_key] = param_default_val
+                        needs_save = True
+                        log.info(f"StrategyConfig: Novo parâmetro '{param_key}' adicionado a '{name}' a partir do default.")
                 
         if needs_save:
             self._save_config(config)

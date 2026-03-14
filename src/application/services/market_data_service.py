@@ -193,18 +193,21 @@ class MarketDataService:
         tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
         atr_14 = tr.rolling(window=14).mean().iloc[-1]
         
-        # ADX 14 (Simplified Wilder's)
-        up = highs - highs.shift()
-        down = lows.shift() - lows
+        # ADX 14 — Wilder's RMA (padrão de mercado: TradingView, MT5, Bloomberg)
+        # Wilder's RMA: EWM com span=N, que em pandas é com=N-1 (equivale a alpha=1/N)
+        up = highs.diff()
+        down = -lows.diff()
         plus_dm = np.where((up > down) & (up > 0), up, 0.0)
         minus_dm = np.where((down > up) & (down > 0), down, 0.0)
         
-        tr_smooth = tr.ewm(alpha=1/14, adjust=False).mean()
-        plus_di = 100 * (pd.Series(plus_dm).ewm(alpha=1/14, adjust=False).mean() / tr_smooth)
-        minus_di = 100 * (pd.Series(minus_dm).ewm(alpha=1/14, adjust=False).mean() / tr_smooth)
+        # Wilder Smoothing = span=14 → com=13 → alpha=1/14
+        wilder_period = 14
+        tr_smooth = tr.ewm(com=wilder_period - 1, adjust=False).mean()
+        plus_di  = 100 * (pd.Series(plus_dm, index=tr.index).ewm(com=wilder_period - 1, adjust=False).mean() / tr_smooth.replace(0, np.nan))
+        minus_di = 100 * (pd.Series(minus_dm, index=tr.index).ewm(com=wilder_period - 1, adjust=False).mean() / tr_smooth.replace(0, np.nan))
         
-        dx = 100 * (abs(plus_di - minus_di) / (plus_di + minus_di))
-        adx_14 = dx.ewm(alpha=1/14, adjust=False).mean().iloc[-1]
+        dx = 100 * ((plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan))
+        adx_14 = dx.ewm(com=wilder_period - 1, adjust=False).mean().iloc[-1]
         
         # Bollinger Bands (20, 2)
         std_20 = closes.rolling(window=20).std().iloc[-1]
