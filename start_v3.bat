@@ -42,17 +42,8 @@ echo.
 :: ─────────────────────────────────────────────────────
 echo [3/3] Iniciando Caddy (proxy reverso — SEMPRE O ULTIMO)...
 
-where caddy > nul 2>&1
-if %errorlevel% equ 0 (
-    start "RL Trader — Caddy" cmd /k "cd /d %~dp0 && caddy run --config Caddyfile || (echo. && echo [ERRO] Caddy falhou && pause)"
-    echo  [OK] Caddy no ar.
-) else if exist "%~dp0caddy.exe" (
-    start "RL Trader — Caddy" cmd /k "cd /d %~dp0 && caddy.exe run --config Caddyfile || (echo. && echo [ERRO] Caddy falhou && pause)"
-    echo  [OK] Caddy no ar (local).
-) else (
-    echo  [AVISO] caddy.exe nao encontrado!
-    echo  Verifique se o Caddy esta instalado no PATH do servidor.
-)
+start "RL Trader — Caddy" cmd /k "cd /d C:\RL_Trader && caddy.exe run || (echo. && echo [ERRO] Caddy falhou && pause)"
+echo  [OK] Caddy no ar.
 echo.
 
 :: ─────────────────────────────────────────────────────
