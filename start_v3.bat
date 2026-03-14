@@ -3,66 +3,55 @@ setlocal EnableDelayedExpansion
 chcp 65001 > nul
 
 echo.
-echo  RL Trader V4 — Iniciando Sistema...
+echo  RL Trader V4 — Reiniciando Sistema...
 echo  =====================================================
 echo.
 
 :: ─────────────────────────────────────────────────────
-:: STEP 1 — Backend (FastAPI)
-:: Inicia primeiro: WebSocket, API e motor de trading
+:: STEP 1 — Fechar tudo que estiver aberto
 :: ─────────────────────────────────────────────────────
-echo [1/3] Iniciando Backend (FastAPI porta 8001)...
-start "RL Trader — Backend" cmd /k "cd /d %~dp0 && python -m src.main || (echo ERRO NO BACKEND - pressione tecla para ver log && pause)"
+echo [1/3] Encerrando processos anteriores...
 
-echo  Aguardando backend inicializar (8 segundos)...
-timeout /t 8 /nobreak > nul
-echo  [OK] Backend iniciado.
-echo.
+:: Fecha janelas cmd abertas pelo start_v3 (por titulo)
+taskkill /FI "WINDOWTITLE eq RL Trader*" /F > nul 2>&1
 
-:: ─────────────────────────────────────────────────────
-:: STEP 2 — Frontend (Vite Dev ou servir dist)
-:: Serve o frontend React em localhost:5173
-:: ─────────────────────────────────────────────────────
-echo [2/3] Verificando modo do frontend...
+:: Mata processos pelo executavel
+taskkill /F /IM python.exe   > nul 2>&1
+taskkill /F /IM caddy.exe    > nul 2>&1
 
-:: Se houver pasta dist, serve estático; caso contrário, dev mode
-if exist "%~dp0frontend\dist\index.php" (
-    echo  Modo: Produção (servindo /dist via Caddy — frontend ja builded)
-    echo  [OK] Frontend será servido pelo Caddy.
-) else (
-    echo  Modo: Desenvolvimento (npm run dev)
-    start "RL Trader — Frontend Dev" cmd /k "cd /d %~dp0\frontend && npm run dev || pause"
-    echo  Aguardando frontend dev server (5 segundos)...
-    timeout /t 5 /nobreak > nul
-    echo  [OK] Frontend Dev iniciado em http://localhost:5173
-)
-echo.
-
-:: ─────────────────────────────────────────────────────
-:: STEP 3 — Caddy (Sempre por último!)
-:: Proxy reverso: :80 -> backend :8001 + frontend :5173
-:: IMPORTANTE: Caddy DEVE ser o último a subir.
-::             Se subir antes do backend, ele não consegue
-::             resolver o upstream e falha silenciosamente.
-:: ─────────────────────────────────────────────────────
-echo [3/3] Iniciando Caddy (proxy reverso — ULTIMO a subir)...
-echo  Aguardando mais 3 segundos para garantir upstreams prontos...
+echo  [OK] Processos anteriores encerrados.
+echo  Aguardando liberacao de portas (3 segundos)...
 timeout /t 3 /nobreak > nul
+echo.
 
-:: Tenta parar instância anterior do Caddy (se houver)
-taskkill /F /IM caddy.exe > nul 2>&1
+:: ─────────────────────────────────────────────────────
+:: STEP 2 — Backend (FastAPI :8001)
+:: ─────────────────────────────────────────────────────
+echo [2/3] Iniciando Backend (FastAPI porta 8001)...
+start "RL Trader — Backend" cmd /k "cd /d %~dp0 && python -m src.main || (echo. && echo [ERRO] Backend falhou - veja o log acima && pause)"
 
-:: Verifica se Caddy existe no PATH ou na pasta local
+echo  Aguardando backend inicializar (10 segundos)...
+timeout /t 10 /nobreak > nul
+echo  [OK] Backend no ar.
+echo.
+
+:: ─────────────────────────────────────────────────────
+:: STEP 3 — Caddy (SEMPRE POR ÚLTIMO)
+:: O frontend e servido pelo Hostinger (via GitHub Actions)
+:: Caddy faz proxy reverso apenas para o backend local
+:: ─────────────────────────────────────────────────────
+echo [3/3] Iniciando Caddy (proxy reverso — SEMPRE O ULTIMO)...
+
 where caddy > nul 2>&1
 if %errorlevel% equ 0 (
-    start "RL Trader — Caddy" cmd /k "cd /d %~dp0 && caddy run --config Caddyfile || (echo ERRO NO CADDY && pause)"
-    echo  [OK] Caddy iniciado.
+    start "RL Trader — Caddy" cmd /k "cd /d %~dp0 && caddy run --config Caddyfile || (echo. && echo [ERRO] Caddy falhou && pause)"
+    echo  [OK] Caddy no ar.
 ) else if exist "%~dp0caddy.exe" (
-    start "RL Trader — Caddy" cmd /k "cd /d %~dp0 && caddy.exe run --config Caddyfile || (echo ERRO NO CADDY && pause)"
-    echo  [OK] Caddy iniciado (local).
+    start "RL Trader — Caddy" cmd /k "cd /d %~dp0 && caddy.exe run --config Caddyfile || (echo. && echo [ERRO] Caddy falhou && pause)"
+    echo  [OK] Caddy no ar (local).
 ) else (
-    echo  [AVISO] caddy.exe nao encontrado no PATH nem na pasta.
-    echo  O frontend so estara disponivel em http://localhost:5173
+    echo  [AVISO] caddy.exe nao encontrado!
+    echo  Verifique se o Caddy esta instalado no PATH do servidor.
 )
 echo.
 
@@ -70,15 +59,17 @@ echo.
 :: RESUMO
 :: ─────────────────────────────────────────────────────
 echo  =====================================================
-echo  SISTEMA INICIADO
+echo  SISTEMA NO AR
 echo  =====================================================
 echo.
 echo  Backend API  : http://localhost:8001
-echo  Frontend Dev : http://localhost:5173  (se modo dev)
-echo  Dashboard    : https://clickandoffers.com  (via Caddy)
+echo  Dashboard    : https://clickandoffers.com  (Hostinger)
 echo  WebSocket    : ws://localhost:8001/ws
 echo.
-echo  Para parar: feche as janelas do Backend, Frontend e Caddy.
+echo  Frontend: servido pelo Hostinger (nao roda aqui)
+echo  Para atualizar o front: push no GitHub Actions
+echo.
+echo  Para parar: rode este script de novo (mata tudo antes)
 echo  Para atualizar: rode update_vps.bat
 echo.
 pause
