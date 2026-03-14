@@ -20,6 +20,7 @@ from src.application.strategies.order_flow_strategy import OrderFlowStrategy
 from src.domain.strategy import AnalysisSide, StrategyCandidate, RegimeType
 
 from src.application.services.strategy_config_service import strategy_config_service
+from src.application.services.engine_config_service import engine_config_service
 
 class StrategyEngine:
     """
@@ -36,7 +37,7 @@ class StrategyEngine:
             SMCStrategy(),
             OrderFlowStrategy()
         ]
-        self.scan_interval = 60 # 1 minute for MVP
+        # scan_interval é lido dinamicamente a cada ciclo do engine_config_service
         
     async def start(self):
         if self.running:
@@ -52,10 +53,11 @@ class StrategyEngine:
 
     def get_state(self) -> dict:
         """Expose internal state for UI."""
+        ecfg = engine_config_service.get()
         return {
             "running": self.running,
             "strategies": [s.name for s in self.strategies],
-            "scan_interval": self.scan_interval
+            "scan_interval": ecfg.scan.interval_sec
         }
 
     async def _analysis_loop(self):
@@ -70,13 +72,14 @@ class StrategyEngine:
                     log.info(f"StrategyEngine: Analyzing {len(active_symbols)} symbols...")
                     for symbol in active_symbols:
                         await self._analyze_symbol(symbol)
-                        # Throttle to avoid flooding MT5
-                        await asyncio.sleep(0.5) 
+                    # Throttle to avoid flooding MT5
+                        await asyncio.sleep(engine_config_service.get().scan.symbol_delay_sec)
 
             except Exception as e:
                 log.error(f"StrategyEngine: Loop Error: {e}", exc_info=True)
-                
-            await asyncio.sleep(self.scan_interval)
+
+            # Intervalo dinâmico: relê a cada ciclo para aplicar mudanças da UI sem restart
+            await asyncio.sleep(engine_config_service.get().scan.interval_sec)
 
     async def _analyze_symbol(self, symbol: str):
         # 3. News / Blackout Check
@@ -112,20 +115,20 @@ class StrategyEngine:
                     })
                 
                 # --- Step 4: MTF Confluency Check (Phase 2) ---
-                # Strict Policy -> Moderate Penalty (-15) if CONTRA
+                ecfg = engine_config_service.get()
                 if context.mtf_trend != AnalysisSide.NEUTRAL and candidate.side != AnalysisSide.NEUTRAL:
                      if context.mtf_trend != candidate.side:
-                         new_score = max(0.0, candidate.final_score - 15.0)
+                         new_score = max(0.0, candidate.final_score + ecfg.mtf.contra_penalty)
                          candidate = candidate.copy(update={
                              "final_score": new_score,
-                             "score_mtf": -15.0,
-                             "reason_code": candidate.reason_code + " | MTF_CONTRA"
+                             "score_mtf": ecfg.mtf.contra_penalty,
+                             "reason_code": candidate.reason_code + f" | MTF_CONTRA({ecfg.mtf.contra_penalty:+.0f})"
                          })
                      else:
                          # Aligned
                          candidate = candidate.copy(update={
-                             "final_score": candidate.final_score + 10.0,
-                             "score_mtf": 10.0
+                             "final_score": candidate.final_score + ecfg.mtf.aligned_bonus,
+                             "score_mtf": ecfg.mtf.aligned_bonus
                          })
                 
                 # --- Step 5: Strict Regime Locks (REMOVED: Delegated to individual strategy scores) ---
@@ -137,30 +140,26 @@ class StrategyEngine:
                 log.error(f"StrategyEngine: Strategy {strategy.name} failed for {symbol}: {e}")
 
         # === A3: ENSEMBLE SCORE — Consenso multi-estratégia ===
-        # Conta quantas estratégias concordam no mesmo lado do vencedor
         if candidates:
-            for c in candidates:
-                c_side = getattr(c, 'side', None)
+            ecfg = engine_config_service.get()
             top_side = candidates[0].side if candidates else None
             agree_count = sum(1 for c in candidates if c.side == top_side)
             total_voting = len(candidates)
 
-            if total_voting >= 3 and agree_count >= 3:
-                # Consenso forte (3+ concordam) — bônus de confiança
-                bonus = 10.0
+            if total_voting >= ecfg.ensemble.min_voting and agree_count >= ecfg.ensemble.min_agree_count:
+                bonus = ecfg.ensemble.strong_bonus
                 candidates[0] = candidates[0].copy(update={
                     "final_score": candidates[0].final_score + bonus,
                     "reason_code": candidates[0].reason_code + f" | ENSEMBLE_STRONG({agree_count}/{total_voting})"
                 })
                 log.info(f"StrategyEngine: ENSEMBLE STRONG consensus {agree_count}/{total_voting} for {symbol} {top_side} → +{bonus} bonus")
-            elif agree_count == 1 and total_voting >= 3:
-                # Sem consenso (só 1 de 3+ concorda) — penalidade
-                penalty = 10.0
+            elif agree_count == 1 and total_voting >= ecfg.ensemble.min_voting:
+                penalty = ecfg.ensemble.weak_penalty
                 candidates[0] = candidates[0].copy(update={
-                    "final_score": max(0, candidates[0].final_score - penalty),
+                    "final_score": max(0, candidates[0].final_score + penalty),
                     "reason_code": candidates[0].reason_code + f" | ENSEMBLE_WEAK(1/{total_voting})"
                 })
-                log.debug(f"StrategyEngine: ENSEMBLE WEAK singular signal for {symbol} → -{penalty} penalty")
+                log.debug(f"StrategyEngine: ENSEMBLE WEAK singular signal for {symbol} → {penalty} penalty")
 
         # 3. Winner Selection (Winner Takes All + Tie Break)
         if not candidates:
@@ -174,8 +173,8 @@ class StrategyEngine:
         if len(candidates) > 1:
             runner_up = candidates[1]
             diff = winner.final_score - runner_up.final_score
-            
-            if diff < 5.0: # Delta < 5 points
+            tie_delta = engine_config_service.get().tie_break.delta_threshold
+            if diff < tie_delta:
                 advanced_strategies = ["SmartMoney", "VolatilityBreakout", "OrderFlowScalping"]
                 basic_strategies = ["TrendFollowing", "MeanReversion"]
                 

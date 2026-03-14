@@ -3,6 +3,7 @@ import os
 from typing import Dict, List, Any
 from pydantic import BaseModel, Field
 from src.infrastructure.logger import log
+from src.application.services.engine_config_service import engine_config_service
 
 class StrategyConfigItem(BaseModel):
     name: str
@@ -98,12 +99,14 @@ class StrategyConfigService:
 
     async def walk_forward_optimize(self, min_trades: int = 20):
         """B1 — Walk-Forward Optimization: ajusta weight_multiplier baseado no Sharpe de cada estratégia.
-        Chame periodicamente (ex: 1x/dia) para auto-calibrar pesos.
-        - Sharpe < 0  → reduz peso em 20% (min 0.5)
-        - Sharpe > 1.0 → aumenta peso em 10% (max 2.0)
-        - Entre 0 e 1.0 → mantém (sem dados suficientes para ajustar)
+        Parâmetros configurados em engine_config.json → walk_forward.
         """
         try:
+            ecfg = engine_config_service.get().walk_forward
+            if not ecfg.enabled:
+                log.info("WalkForward: desabilitado pelo engine_config. Pulando.")
+                return
+
             from src.infrastructure.event_store import event_store
             trades = await event_store.get_closed_trades(limit=500)
             if len(trades) < min_trades:
@@ -113,10 +116,9 @@ class StrategyConfigService:
             needs_save = False
             for strategy_name, cfg in self.config.strategies.items():
                 strat_trades = [t for t in trades if t.strategy_name == strategy_name]
-                if len(strat_trades) < 10:
-                    continue  # Menos de 10 trades — não ajusta
+                if len(strat_trades) < ecfg.min_trades_per_strategy:
+                    continue
 
-                # Calcula Sharpe simples por trade (sem agrupar por dia)
                 profits = [t.profit for t in strat_trades]
                 avg_p = sum(profits) / len(profits)
                 std_p = (sum((p - avg_p) ** 2 for p in profits) / len(profits)) ** 0.5
@@ -125,12 +127,14 @@ class StrategyConfigService:
                 old_weight = cfg.weight_multiplier
                 new_weight = old_weight
 
-                if sharpe < 0:
-                    new_weight = max(0.5, round(old_weight * 0.8, 2))  # -20%
-                    log.warning(f"WalkForward: [{strategy_name}] Sharpe={sharpe:.2f} < 0 → weight {old_weight} → {new_weight}")
-                elif sharpe > 1.0:
-                    new_weight = min(2.0, round(old_weight * 1.1, 2))  # +10%
-                    log.info(f"WalkForward: [{strategy_name}] Sharpe={sharpe:.2f} > 1.0 → weight {old_weight} → {new_weight}")
+                if sharpe < ecfg.sharpe_low_threshold:
+                    factor = 1.0 - (ecfg.weight_decrease_pct / 100.0)
+                    new_weight = max(ecfg.weight_min, round(old_weight * factor, 2))
+                    log.warning(f"WalkForward: [{strategy_name}] Sharpe={sharpe:.2f} < {ecfg.sharpe_low_threshold} → weight {old_weight} → {new_weight}")
+                elif sharpe > ecfg.sharpe_high_threshold:
+                    factor = 1.0 + (ecfg.weight_increase_pct / 100.0)
+                    new_weight = min(ecfg.weight_max, round(old_weight * factor, 2))
+                    log.info(f"WalkForward: [{strategy_name}] Sharpe={sharpe:.2f} > {ecfg.sharpe_high_threshold} → weight {old_weight} → {new_weight}")
                 else:
                     log.debug(f"WalkForward: [{strategy_name}] Sharpe={sharpe:.2f} — peso mantido em {old_weight}")
 

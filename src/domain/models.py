@@ -38,6 +38,7 @@ class RiskConfig(BaseModel):
     max_lot_size: float = 0.01
     global_max_spread_points: int = 500
     global_max_daily_loss_currency: float = -50.0
+    portfolio_heat_max_pct: float = 6.0  # % do equity — GATE_PORTFOLIO_HEAT rejeita se total de risco aberto exceder
     profiles: Dict[str, InstrumentProfile] = Field(default_factory=dict)
 
 class OrderSide(str, Enum):

@@ -10,6 +10,7 @@ import os
 import math
 
 from src.infrastructure.news.news_worker import news_worker
+from src.application.services.engine_config_service import engine_config_service
 
 class GuardianService:
     def __init__(self):
@@ -138,16 +139,20 @@ class GuardianService:
         Retorna o volume calculado (com floor no base_volume mínimo)."""
         try:
             from src.infrastructure.event_store import event_store
-            # Cache por 5 minutos por estratégia — evita query dupla se ordens chegarem em rajada
             import time as _time
+            ecfg = engine_config_service.get().kelly
+
+            if not ecfg.enabled:
+                return base_volume  # Kelly desativado pela UI
+
             cache_key = strategy_name
             cached = self._kelly_cache.get(cache_key)
-            if cached and (_time.time() - cached[1]) < 300:  # 5 min TTL
+            if cached and (_time.time() - cached[1]) < ecfg.cache_ttl_sec:
                 return cached[0]
 
             trades = await event_store.get_closed_trades(limit=200)
             strat_trades = [t for t in trades if t.strategy_name == strategy_name]
-            if len(strat_trades) < 20:  # Mínimo de 20 trades para ativar
+            if len(strat_trades) < ecfg.min_trades_to_activate:
                 return base_volume  # Dados insuficientes — usa volume base
 
             wins = [t for t in strat_trades if t.profit > 0]
@@ -159,15 +164,15 @@ class GuardianService:
             avg_rr = avg_win / avg_loss if avg_loss > 0 else 1.0
 
             kelly_f = win_rate - (1 - win_rate) / avg_rr
-            half_kelly = max(0.01, kelly_f * 0.5)  # Half-Kelly conservador
-            half_kelly = min(half_kelly, 0.05)     # Cap: máx 5% do equity por trade
+            half_kelly = max(0.01, kelly_f * ecfg.half_kelly_fraction)
+            half_kelly = min(half_kelly, ecfg.max_kelly_pct / 100.0)  # Cap configurável
 
             risk_pct = getattr(self.config, 'risk_per_trade_pct', 1.0) / 100.0
             kelly_volume = round(equity * half_kelly * risk_pct / 100, 2)
             kelly_volume = max(base_volume, min(kelly_volume, self.config.max_lot_size))
 
-            log.info(f"Kelly [{strategy_name}]: WR={win_rate:.1%} R/R={avg_rr:.2f} f*={kelly_f:.3f} → vol={kelly_volume}")
-            self._kelly_cache[cache_key] = (kelly_volume, _time.time())  # guarda no cache
+            log.info(f"Kelly [{strategy_name}]: WR={win_rate:.1%} R/R={avg_rr:.2f} f*={kelly_f:.3f} half={ecfg.half_kelly_fraction} cap={ecfg.max_kelly_pct}% → vol={kelly_volume}")
+            self._kelly_cache[cache_key] = (kelly_volume, _time.time())
             return kelly_volume
         except Exception as e:
             log.warning(f"GuardianService: Kelly falhou para {strategy_name}: {e}")
@@ -222,7 +227,7 @@ class GuardianService:
         # --- GATE 0.5: Portfolio Heat Check (A1) ---
         try:
             heat = await self.get_portfolio_heat()
-            heat_limit = getattr(self.config, 'portfolio_heat_max_pct', 6.0)  # 6% default
+            heat_limit = self.config.portfolio_heat_max_pct  # configurável via /api/risk/config
             if heat["heat_pct"] > heat_limit:
                 await event_bus.publish(OrderRejected(
                     reason=f"Portfolio Heat {heat['heat_pct']:.1f}% > limit {heat_limit}%. Risco total muito alto.",

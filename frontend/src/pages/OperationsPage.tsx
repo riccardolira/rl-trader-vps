@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
-import { TrendingUp, TrendingDown, Zap, ShieldCheck, Cpu, AlertTriangle, SlidersHorizontal } from 'lucide-react';
+import { TrendingUp, TrendingDown, Zap, ShieldCheck, Cpu, AlertTriangle, SlidersHorizontal, Layers } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { api } from '../services/api';
 import type { EngineState } from '../services/api';
 import { wsClient } from '../core/net/wsClient';
 import { StrategyControlPanel } from '../components/operations/StrategyControlPanel';
 import { RiskControlPanel } from '../components/operations/RiskControlPanel';
+import { EngineTuningPanel } from '../components/operations/EngineTuningPanel';
 import { Link, useLocation } from 'react-router-dom';
 
 function formatPnlEstimate(diff: number, symbol: string, volume: number, assetClass?: string): string {
@@ -274,7 +275,7 @@ export const OperationsPage: React.FC = () => {
 
     // Extract the active sub-tab from the URL path, defaulting to 'signals'
     const activeRoute = location.pathname.split('/')[2] || 'signals';
-    const activeTab = ['signals', 'drafts', 'positions', 'strategies', 'risk'].includes(activeRoute) ? activeRoute : 'signals';
+    const activeTab = ['signals', 'drafts', 'positions', 'strategies', 'risk', 'engine'].includes(activeRoute) ? activeRoute : 'signals';
 
     const [engineState, setEngineState] = useState<EngineState | null>(null);
     const [signals, setSignals] = useState<any[]>([]);
@@ -287,6 +288,7 @@ export const OperationsPage: React.FC = () => {
         { id: 'positions', label: 'Trades Ativos', icon: Cpu },
         { id: 'strategies', label: 'Estratégia (Tuning)', icon: SlidersHorizontal },
         { id: 'risk', label: 'Risco (Parameters)', icon: ShieldCheck },
+        { id: 'engine', label: 'Engine Tuning', icon: Layers },
     ] as const;
 
     useEffect(() => {
@@ -509,6 +511,12 @@ export const OperationsPage: React.FC = () => {
                 {activeTab === 'risk' && (
                     <div className="flex flex-col h-full overflow-y-auto">
                         <RiskControlPanel />
+                    </div>
+                )}
+
+                {activeTab === 'engine' && (
+                    <div className="flex flex-col h-full overflow-y-auto">
+                        <EngineTuningPanel />
                     </div>
                 )}
             </div>
