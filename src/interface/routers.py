@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Header, Depends
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import asyncio
@@ -107,7 +107,7 @@ async def get_trades_history(limit: int = 100):
     }
 
 @router.delete("/api/trades/history/{ticket}")
-async def delete_history_trade(ticket: int):
+async def delete_history_trade(ticket: int, _: None = Depends(require_admin_key)):
     """Deletes a closed trade from the local ledger (Event Store)."""
     success = await event_store.delete_closed_trade(ticket)
     if success:
@@ -149,7 +149,7 @@ async def get_mt5_config():
     }
 
 @router.post("/api/config/mt5")
-async def update_mt5_config(config: MT5ConfigUpdate):
+async def update_mt5_config(config: MT5ConfigUpdate, _: None = Depends(require_admin_key)):
     """Updates the MT5 credentials in .env, memory and restarts the worker."""
     env_path = os.path.join(settings.BASE_DIR, ".env")
     

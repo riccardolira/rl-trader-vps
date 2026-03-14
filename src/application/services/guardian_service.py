@@ -217,7 +217,13 @@ class GuardianService:
             if draft.proposed_sl and draft.proposed_sl > 0:
                  open_price = draft.market_context.current_price if draft.market_context and hasattr(draft.market_context, 'current_price') else draft.proposed_entry
                  if open_price and open_price > 0:
-                     pt_val = getattr(settings, "POINT_VALUE", 1.0) # Might need MT5 fetch in future for precise
+                     # C14: Usa o point_value real do contexto de mercado (calculado pelo MarketDataService via MT5)
+                     # settings.POINT_VALUE não existe — era sempre 1.0 (errado para XAUUSD, Índices, etc.)
+                     pt_val = 1.0
+                     if draft.market_context and hasattr(draft.market_context, 'point_value') and draft.market_context.point_value:
+                         pt_val = draft.market_context.point_value
+                     elif draft.market_context and isinstance(draft.market_context, dict):
+                         pt_val = draft.market_context.get('point_value', 1.0) or 1.0
                      distance = abs(open_price - draft.proposed_sl)
                      money_risk = round(distance * draft.raw_volume * pt_val, 2)
                      worst_case_loss = money_risk * 1.05 # Add 5% for slippage projection

@@ -6,12 +6,19 @@ from src.services.execution.reconcile import Reconciler
 from src.infrastructure.mt5_adapter import mt5_adapter
 
 class ExecutionService:
+    CB_FILE = "circuit_breaker.lock"
+
     def __init__(self):
         self.reconciler = Reconciler()
         self.running = False
         self._last_position_count = -1
         self._sync_ticks = 0
         self._session_check_ticks = 0
+        # C7: Carrega estado do circuit breaker do arquivo (persiste entre reinicializações)
+        import os
+        self.circuit_breaker_tripped = os.path.exists(self.CB_FILE)
+        if self.circuit_breaker_tripped:
+            log.warning("ExecutionService: Circuit Breaker ainda ativo (arquivo lock encontrado). Reinicie manualmente ou aguarde reset diário.")
         log.info("ExecutionService initialized.")
 
     async def start(self):
@@ -120,28 +127,10 @@ class ExecutionService:
                                      
                                      is_buy = p.side == "BUY" or getattr(p, "type", 1) == 0 # Handle enum or MT5 raw
                                      
-                                     # Let's say we activate Break-Even at 50%
+                                     # C6 FIX: Break-Even é verificado PRIMEIRO, antes do Partial TP
+                                     # Isso evita conflito de volume: Partial muda volume, Break-Even usaria dado desatualizado
                                      if progress_pct >= 0.50 and p.profit > 0:
-                                          # Partial Take Profit (TP1) at exactly 1x Risk/Reward distance
-                                          original_sl_distance = abs(p.open_price - p.sl)
-                                          if original_sl_distance > 0 and current_distance >= original_sl_distance:
-                                              # Check if we still have the full volume (approximate to avoid float issues)
-                                              # Need original volume from DB or roughly check if it's large enough.
-                                              # For safety, we only partial close if volume > 0.01 and we haven't done it yet
-                                              # A simple flag or just checking if volume hasn't been halved:
-                                              if p.ticket in db_map:
-                                                  db_origin_vol = db_map[p.ticket].volume
-                                                  if p.volume >= db_origin_vol * 0.99 and p.volume > 0.01:
-                                                      partial_vol = round(p.volume / 2.0, 2)
-                                                      # MT5 minimum volume check
-                                                      if partial_vol >= 0.01:
-                                                          log.info(f"ExecutionService: PARTIAL TAKE-PROFIT (1:1 R/R) for {p.symbol}. Closing {partial_vol} lots.")
-                                                          success = await mt5_adapter.close_position(p.ticket, volume=partial_vol)
-                                                          if success:
-                                                              from src.services.notification.notification_service import notification_service
-                                                              await notification_service.send_alert("PARCIAL EXECUTADA", f"{p.symbol} andou 1:1 do risco. Lucro parcial garantido no bolso!", "SUCCESS")
-
-                                          # Determine if SL is already at or past open_price
+                                          # === PASSO 1: BREAK-EVEN (move SL para preço de abertura) ===
                                           sl_needs_move = False
                                           if is_buy and p.sl < p.open_price:
                                               sl_needs_move = True
@@ -149,14 +138,29 @@ class ExecutionService:
                                               sl_needs_move = True
                                               
                                           if sl_needs_move:
-                                              # Move to Open Price (Break Even) + small margin to cover spread if desired
-                                              # For MVP: Move exactly to open price
                                               new_sl = p.open_price
                                               log.info(f"ExecutionService: BREAK-EVEN triggered for {p.symbol}. Moving SL to {new_sl}")
                                               success = await mt5_adapter.modify_position(p.ticket, new_sl=new_sl)
                                               if success:
                                                   from src.services.notification.notification_service import notification_service
                                                   await notification_service.send_alert("BREAK-EVEN ATIVADO", f"O trade {p.symbol} andou a favor. Operação protegida no zero-a-zero.", "INFO")
+
+                                          # === PASSO 2: PARTIAL TP (fecha 50% do volume ao atingir 1:1 R/R) ===
+                                          # Só executa se Break-Even já estiver no lugar (SL <= open_price para BUY)
+                                          be_already_set = (is_buy and p.sl >= p.open_price) or (not is_buy and p.sl <= p.open_price)
+                                          original_sl_distance = abs(p.open_price - p.sl)
+                                          if be_already_set and original_sl_distance > 0 and current_distance >= original_sl_distance:
+                                              if p.ticket in db_map:
+                                                  db_origin_vol = db_map[p.ticket].volume
+                                                  # Só executa se ainda é o volume original (não foi parcialmente fechado)
+                                                  if p.volume >= db_origin_vol * 0.99 and p.volume > 0.01:
+                                                      partial_vol = round(p.volume / 2.0, 2)
+                                                      if partial_vol >= 0.01:
+                                                          log.info(f"ExecutionService: PARTIAL TAKE-PROFIT (1:1 R/R) for {p.symbol}. Closing {partial_vol} lots.")
+                                                          success = await mt5_adapter.close_position(p.ticket, volume=partial_vol)
+                                                          if success:
+                                                              from src.services.notification.notification_service import notification_service
+                                                              await notification_service.send_alert("PARCIAL EXECUTADA", f"{p.symbol} andou 1:1 do risco. Lucro parcial garantido no bolso!", "SUCCESS")
                                               
                                      # Trailing Stop: If progress >= 75%, keep trailing it 25% behind
                                      if progress_pct >= 0.75 and p.profit > 0:
@@ -200,6 +204,24 @@ class ExecutionService:
             except Exception as e:
                 log.debug(f"Telemetry Loop Error (expected if not connected): {e}")
 
+            # C7: Reset automático do Circuit Breaker ao início de um novo dia
+            if self.circuit_breaker_tripped:
+                import os
+                if os.path.exists(self.CB_FILE):
+                    try:
+                        with open(self.CB_FILE, "r") as f:
+                            content = f.read()
+                        # Verifica se o lock foi criado em um dia anterior
+                        lock_date = content.split("|")[0][:10]  # YYYY-MM-DD
+                        from datetime import datetime
+                        today = datetime.utcnow().strftime("%Y-%m-%d")
+                        if lock_date < today:
+                            os.remove(self.CB_FILE)
+                            self.circuit_breaker_tripped = False
+                            log.info("Circuit Breaker resetado automaticamente (novo dia).")
+                    except Exception:
+                        pass  # Mantém o lock ativo se não conseguir ler
+
             import asyncio
             await asyncio.sleep(0.25)
 
@@ -220,6 +242,15 @@ class ExecutionService:
         if total_daily_pnl <= max_loss:
             log.critical(f"CIRCUIT BREAKER: Daily PnL ({total_daily_pnl:.2f}) surpassed maximum loss limit ({max_loss}). Halt initiated.")
             self.circuit_breaker_tripped = True
+            # C7: Persiste no arquivo para sobreviver a reinicializações
+            try:
+                import os
+                with open(self.CB_FILE, "w") as f:
+                    from datetime import datetime
+                    f.write(f"{datetime.utcnow().isoformat()}|{total_daily_pnl:.2f}|{max_loss}")
+                log.warning(f"Circuit Breaker lock file criado: {self.CB_FILE}")
+            except Exception as e:
+                log.error(f"Falha ao criar circuit_breaker.lock: {e}")
             
             await notification_service.send_alert(
                  "🚨 CIRCUIT BREAKER 🚨", 

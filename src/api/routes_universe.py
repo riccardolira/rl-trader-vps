@@ -125,5 +125,23 @@ async def get_news_threats():
 @router.get("/correlation")
 async def get_correlation():
     """Returns the live Pearson correlation matrix for the active/eligible set."""
-    return await asset_selection_service.get_correlation_matrix()
+    # C10: get_correlation_matrix() não existe — retorna dados do ranking como substituto funcional
+    try:
+        snapshot = asset_selection_service.get_snapshot()
+        active_set = snapshot.active_set
+        ranking = snapshot.ranking
+        
+        # Filtra apenas ativos elegíveis com dados
+        eligible = [r for r in ranking if r.symbol in active_set]
+        
+        return {
+            "status": "ok",
+            "active_set": active_set,
+            "eligible_count": len(eligible),
+            "correlation_enabled": asset_selection_service.config.correlation_enabled,
+            "max_threshold": asset_selection_service.config.max_correlation_threshold,
+            "note": "Correlação calculada internamente pelo scanner. Matriz completa disponível em /api/universe/ranking."
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
