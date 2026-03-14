@@ -1,41 +1,32 @@
-# Bot Python files
+# Secrets — NUNCA commitar
+.env
+*.env
+
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Logs
-logs/
-*.log
-
-# C environment
-.env
-.venv
-env/
+*.pyc
+.venv/
 venv/
-ENV/
-env.bak/
-venv.bak/
 
-# SQLite databases
-*.sqlite3
+# Databases locais
 *.db
+*.sqlite
 
-# Frontend
+# Logs e caches do bot
+*.log
+boot_output.txt
+heartbeat.json
+news_cache.json
+mt5_dump.json
+
+# Node / Frontend build
 node_modules/
-dist/
-build/
-.next/
-*.local
+frontend/node_modules/
+frontend/dist/
 
-# System files
+# IDEs e OS
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
-
-# VS Code
-.vscode/
-
-# Ignore sensitive configuration files (You should use environment variables or a specific config not tracked by Git for passwords)
-# If you have specific files with passwords, add them here.
-*config*.json
-*config_backup*.json
-!*config.default.json
