@@ -47,7 +47,10 @@ class Settings(BaseSettings):
     # --- API ---
     API_PORT: int = 8001
     API_KEY: str = "secret-key-change-me"
-    
+
+    # --- Sentiment (Finnhub) ---
+    FINNHUB_API_KEY: str = ""  # Preencha no .env com sua key do finnhub.io (plano Free OK)
+
     # --- Asset Selection Subsystem (ASS) ---
     SELECTION_MODE: str = "manual"  # manual, auto, hybrid
     SELECTION_UNIVERSE_SYMBOLS: list = ["EURUSD", "GBPUSD", "XAUUSD", "BTCUSD", "WIN$N", "WDO$N"] # Expanded Whitelist

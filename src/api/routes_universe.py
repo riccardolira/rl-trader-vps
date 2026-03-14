@@ -3,12 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from src.infrastructure.logger import log
-# In a real scenario, we would inject the AssetSelectionService or similar
-# For now, we might need to mock or fetch from a global service if available
-# We don't have a global AssetSelectionService instance easily accessible in this file structure 
-# unless we import it from main or engine (circular imports).
-# We will use valid mock data or try to access the engine state if possible.
-# Ideally, services should be singletons or injected.
+from src.application.services.sentiment_service import sentiment_service
 
 router = APIRouter(prefix="/api/universe", tags=["Universe"])
 
@@ -145,3 +140,20 @@ async def get_correlation():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
+# 7. Finnhub Sentiment Cache
+@router.get("/sentiment")
+async def get_sentiment():
+    """Returns the Finnhub sentiment data cached from the last scan cycle.
+    No new API calls are made here — data comes from sentiment_service cache.
+    Returns 'enabled: false' if FINNHUB_API_KEY is not configured.
+    """
+    from src.infrastructure.config import settings
+    enabled = bool(getattr(settings, "FINNHUB_API_KEY", ""))
+    cached = sentiment_service.get_cached()
+    return {
+        "enabled": enabled,
+        "count": len(cached),
+        "data": cached,
+        "note": "Cache TTL: 15 min. Score boost: BULLISH +5pts, BEARISH -5pts."
+    }

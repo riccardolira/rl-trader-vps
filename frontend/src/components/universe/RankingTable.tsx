@@ -5,6 +5,19 @@ import { cn } from '../../lib/utils';
 
 type FilterKey = 'all' | 'selected' | 'eligible' | 'warn' | 'blocked';
 
+const SentimentBadge: React.FC<{ label?: string | null }> = ({ label }) => {
+    if (!label) return null;
+    const cfg =
+        label === 'BULLISH' ? { cls: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', icon: '▲', text: 'Bull' } :
+        label === 'BEARISH' ? { cls: 'bg-rose-500/10 text-rose-500 border-rose-500/20', icon: '▼', text: 'Bear' } :
+                              { cls: 'bg-muted/50 text-muted-foreground border-transparent', icon: '◯', text: 'Neutral' };
+    return (
+        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${cfg.cls} flex items-center gap-0.5`}>
+            {cfg.icon} {cfg.text}
+        </span>
+    );
+};
+
 interface TableProps {
     data: RankingRow[];
     onRowClick: (asset: RankingRow) => void;
@@ -160,11 +173,12 @@ export const RankingTable: React.FC<TableProps> = React.memo(({ data, onRowClick
                                             {row.specification} ({row.reason_code})
                                         </span>
                                     ) : (
-                                        <div className="flex gap-1.5 font-mono text-[10px] opacity-70 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-1.5 font-mono text-[10px] opacity-70 group-hover:opacity-100 transition-opacity flex-wrap">
                                             <span title="Liquidity"  className="bg-muted px-1.5 rounded">L:{row.score_breakdown?.liquidity?.toFixed(0)  ?? '?'}</span>
                                             <span title="Volatility" className="bg-muted px-1.5 rounded">V:{row.score_breakdown?.volatility?.toFixed(0) ?? '?'}</span>
                                             <span title="Cost"       className="bg-orange-500/10 text-orange-400 px-1.5 rounded">C:{row.score_breakdown?.cost?.toFixed(0) ?? '?'}</span>
                                             <span title="Stability"  className="bg-muted px-1.5 rounded">S:{row.score_breakdown?.stability?.toFixed(0)  ?? '?'}</span>
+                                            <SentimentBadge label={(row.metrics as any)?.sentiment_label} />
                                         </div>
                                     )}
                                 </td>

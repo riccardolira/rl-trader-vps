@@ -16,6 +16,7 @@ from src.domain.events import BaseEvent
 from src.infrastructure.mt5_adapter import mt5_adapter
 from src.infrastructure.news.news_worker import news_worker
 from .market_data_service import market_data_service
+from .sentiment_service import sentiment_service
 import numpy as np
 
 class AssetSelectionService:
@@ -441,7 +442,48 @@ class AssetSelectionService:
             else:
                 r.decision = "eligible"
                 accepted_for_correlation.append(r)
-        
+
+        # ── D1: Finnhub Sentiment Boost (leve, só top-15 elegíveis) ──────────
+        # Busca sentiment em batch com delay para respeitar o rate limit (60 req/min free tier).
+        # Scored: BULLISH → +5pts, BEARISH → -5pts, NEUTRAL → 0.
+        # Graceful degradation: se a key não estiver configurada ou a API falhar, ignora silenciosamente.
+        try:
+            eligible_for_sentiment = [
+                r for r in ranking_candidates
+                if r.status not in (AssetStatus.HARD_REJECT, AssetStatus.OUT_OF_HOURS)
+            ][:15]  # Só top-15 para poupar CPU/memória no VPS
+
+            if eligible_for_sentiment:
+                symbols_batch = [r.symbol for r in eligible_for_sentiment]
+                sentiment_batch = await sentiment_service.get_batch(symbols_batch, delay_ms=250)
+
+                SENTIMENT_BOOST = 5.0
+                for r in eligible_for_sentiment:
+                    sent = sentiment_batch.get(r.symbol)
+                    if not sent:
+                        continue
+                    label = sent.get("label", "NEUTRAL")
+                    # Armazena label nos metrics para exibição na UI
+                    if r.metrics:
+                        r.metrics.sentiment_label = label
+                        r.metrics.sentiment_bull = sent.get("bullish_pct", 0.0)
+                    # Ajuste leve no score final
+                    if label == "BULLISH" and r.score is not None:
+                        r.score = round(min(100.0, r.score + SENTIMENT_BOOST), 2)
+                        if r.score_breakdown:
+                            r.score_breakdown.total = r.score
+                    elif label == "BEARISH" and r.score is not None:
+                        r.score = round(max(0.0, r.score - SENTIMENT_BOOST), 2)
+                        if r.score_breakdown:
+                            r.score_breakdown.total = r.score
+
+                # Re-sort após o ajuste de sentimento
+                ranking_candidates.sort(key=lambda x: x.score or 0.0, reverse=True)
+                log.info(f"SentimentBoost aplicado a {len(sentiment_batch)}/{len(eligible_for_sentiment)} ativos.")
+        except Exception as sent_err:
+            log.warning(f"Scanner: Sentiment boost ignorado: {sent_err}")
+        # ─────────────────────────────────────────────────────────────────────
+
         self._last_ranking = ranking_candidates
         asyncio.create_task(event_bus.publish(
             BaseEvent(

@@ -60,6 +60,9 @@ class AssetMetrics(BaseModel):
     atr: float = 0.0
     staleness_sec: int = 0
     price: float = 0.0
+    # D1 Finnhub Sentiment (optional — None if key not configured or symbol unsupported)
+    sentiment_label: Optional[str] = None   # "BULLISH" | "BEARISH" | "NEUTRAL"
+    sentiment_bull: Optional[float] = None  # 0.0–100.0
 
 class RankingRow(BaseModel):
     symbol: str
