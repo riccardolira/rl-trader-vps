@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, TrendingUp, Wallet, Save } from 'lucide-react';
 import { api } from '../../services/api';
 
@@ -78,6 +78,23 @@ export const RiskControlPanel: React.FC = () => {
                                 <span className="text-muted-foreground/50 font-bold text-xl">%</span>
                             </div>
                             <p className="text-[10px] text-muted-foreground/50 mt-2">Halts new operations if DD exceeds this value globally.</p>
+                        </div>
+
+                        <div className="group">
+                            <label className="text-[11px] font-bold text-orange-400/80 mb-2 block tracking-wider uppercase">🔥 Portfolio Heat Max (%)</label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="number"
+                                    step="0.5"
+                                    min="1"
+                                    max="30"
+                                    value={config.portfolio_heat_max_pct ?? 6.0}
+                                    onChange={(e) => setConfig({ ...config, portfolio_heat_max_pct: parseFloat(e.target.value) })}
+                                    className="w-full bg-orange-500/5 border border-orange-500/30 rounded-xl px-4 py-3 font-mono text-lg text-orange-400 focus:outline-none focus:border-orange-500/60 transition-colors"
+                                />
+                                <span className="text-orange-400 font-bold text-xl">%</span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground/50 mt-2">Guardian rejeita novos trades se o risco total aberto (SL × volume × pt_val) ultrapassar este % do equity.</p>
                         </div>
                     </div>
                 </div>
