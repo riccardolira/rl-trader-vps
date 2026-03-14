@@ -24,12 +24,12 @@ try:
     # Monta a URL do banco — tenta MySQL primeiro, cai no SQLite
     db_url = None
 
-    if settings.MYSQL_HOST and settings.MYSQL_DATABASE:
+    if settings.DB_HOST and settings.DB_NAME:
         db_url = (
-            f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}"
-            f"@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}"
+            f"mysql+pymysql://{settings.DB_USER}:{settings.DB_PASSWORD}"
+            f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
         )
-        print(f"\n[DB] Usando MySQL: {settings.MYSQL_HOST}/{settings.MYSQL_DATABASE}")
+        print(f"\n[DB] Usando MySQL: {settings.DB_HOST}/{settings.DB_NAME}")
     else:
         db_url = f"sqlite:///{settings.SQLITE_PATH}"
         print(f"\n[DB] Usando SQLite: {settings.SQLITE_PATH}")
