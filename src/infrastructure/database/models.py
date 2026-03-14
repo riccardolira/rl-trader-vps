@@ -1,5 +1,5 @@
 from sqlalchemy.orm import declarative_base, Mapped, mapped_column
-from sqlalchemy import BigInteger, String, Float, DateTime, Text, Index
+from sqlalchemy import BigInteger, String, Float, DateTime, Text, Boolean, Index
 from datetime import datetime
 import typing
 
@@ -24,6 +24,14 @@ class TradeModel(Base):
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     strategy_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     market_context: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # === Analytics Fields (adicionados para rastreamento de performance) ===
+    commission: Mapped[float | None] = mapped_column(Float, nullable=True, default=0.0)
+    swap: Mapped[float | None] = mapped_column(Float, nullable=True, default=0.0)
+    asset_class: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    reason_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    score_signal: Mapped[float | None] = mapped_column(Float, nullable=True)
+    break_even_activated: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=False)
+    trailing_stop_activated: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=False)
 
     # I11: Índices para queries freqüentes (trades ativos, histórico por ativo, ord. por data)
     __table_args__ = (

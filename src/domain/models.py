@@ -195,6 +195,11 @@ class Trade(BaseModel):
     strategy_name: str = "Unknown"
     asset_class: str = "UNKNOWN"
     market_context: Optional[dict] = None
+    # === Analytics Fields ===
+    reason_code: Optional[str] = None          # Motivo da estratégia (ex: BREAKOUT_UP, SMC_AVOID_RANGE)
+    score_signal: Optional[float] = None       # Score bruto gerado pela estratégia
+    break_even_activated: bool = False         # True se Break-Even foi acionado neste trade
+    trailing_stop_activated: bool = False      # True se Trailing Stop foi acionado
 
     @property
     def duration_seconds(self) -> float:

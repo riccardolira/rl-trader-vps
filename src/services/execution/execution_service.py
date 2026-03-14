@@ -144,6 +144,10 @@ class ExecutionService:
                                               if success:
                                                   from src.services.notification.notification_service import notification_service
                                                   await notification_service.send_alert("BREAK-EVEN ATIVADO", f"O trade {p.symbol} andou a favor. Operação protegida no zero-a-zero.", "INFO")
+                                                  # Analytics: marca break_even_activated no DB
+                                                  if p.ticket in db_map:
+                                                      db_map[p.ticket].break_even_activated = True
+                                                      await event_store.upsert_trade(db_map[p.ticket])
 
                                           # === PASSO 2: PARTIAL TP (fecha 50% do volume ao atingir 1:1 R/R) ===
                                           # Só executa se Break-Even já estiver no lugar (SL <= open_price para BUY)

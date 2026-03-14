@@ -43,9 +43,36 @@ try:
     existing_tables = inspector.get_table_names()
     print(f"      Tabelas encontradas: {existing_tables}")
 
-    print("\n[2/2] Criando índices (se ainda não existem)...")
+    print("\n[2/2] Criando tabelas e índices (se ainda não existem)...")
     # create_all só cria o que não existe — não destrói dados
     Base.metadata.create_all(engine, checkfirst=True)
+
+    # Adiciona novas colunas de analytics via ALTER TABLE (seguro para tabelas existentes)
+    analytics_columns = [
+        ("commission", "FLOAT DEFAULT 0.0"),
+        ("swap", "FLOAT DEFAULT 0.0"),
+        ("asset_class", "VARCHAR(50)"),
+        ("reason_code", "VARCHAR(100)"),
+        ("score_signal", "FLOAT"),
+        ("break_even_activated", "BOOLEAN DEFAULT FALSE"),
+        ("trailing_stop_activated", "BOOLEAN DEFAULT FALSE"),
+    ]
+    
+    print("\n[3/3] Verificando e adicionando colunas de analytics...")
+    with engine.connect() as conn:
+        for col_name, col_type in analytics_columns:
+            try:
+                if db_url.startswith("mysql"):
+                    conn.execute(text(f"ALTER TABLE trades ADD COLUMN {col_name} {col_type}"))
+                else:
+                    conn.execute(text(f"ALTER TABLE trades ADD COLUMN {col_name} {col_type}"))
+                conn.commit()
+                print(f"      ✅ Coluna '{col_name}' criada em 'trades'")
+            except Exception as col_err:
+                if "duplicate column" in str(col_err).lower() or "1060" in str(col_err):
+                    print(f"      ℹ️  Coluna '{col_name}' já existe — OK")
+                else:
+                    print(f"      ⚠️  Erro em '{col_name}': {col_err}")
 
     # Verifica os índices criados
     for table_name in ['trades', 'audit_events']:

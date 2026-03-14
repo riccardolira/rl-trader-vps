@@ -105,7 +105,15 @@ class EventStore(IPersistence):
                 magic=trade.magic,
                 comment=trade.comment,
                 strategy_name=trade.strategy_name,
-                market_context=json.dumps(trade.market_context) if trade.market_context else None
+                market_context=json.dumps(trade.market_context) if trade.market_context else None,
+                # === Analytics Fields ===
+                commission=getattr(trade, 'commission', 0.0) or 0.0,
+                swap=getattr(trade, 'swap', 0.0) or 0.0,
+                asset_class=getattr(trade, 'asset_class', None),
+                reason_code=getattr(trade, 'reason_code', None),
+                score_signal=getattr(trade, 'score_signal', None),
+                break_even_activated=getattr(trade, 'break_even_activated', False),
+                trailing_stop_activated=getattr(trade, 'trailing_stop_activated', False),
             )
 
             upsert_dict = {
@@ -114,7 +122,12 @@ class EventStore(IPersistence):
                 'profit': values['profit'],
                 'status': values['status'],
                 'strategy_name': values['strategy_name'],
-                'market_context': values['market_context']
+                'market_context': values['market_context'],
+                # Analytics atualizados no fechamento
+                'commission': values['commission'],
+                'swap': values['swap'],
+                'break_even_activated': values['break_even_activated'],
+                'trailing_stop_activated': values['trailing_stop_activated'],
             }
 
             if db_pool.is_mysql:
@@ -164,7 +177,15 @@ class EventStore(IPersistence):
             magic=magic,
             comment=row.get("comment", ""),
             strategy_name=strategy_name,
-            market_context=market_ctx
+            market_context=market_ctx,
+            # === Analytics Fields ===
+            commission=row.get("commission") or 0.0,
+            swap=row.get("swap") or 0.0,
+            asset_class=row.get("asset_class") or "UNKNOWN",
+            reason_code=row.get("reason_code"),
+            score_signal=row.get("score_signal"),
+            break_even_activated=bool(row.get("break_even_activated", False)),
+            trailing_stop_activated=bool(row.get("trailing_stop_activated", False)),
         )
 
     async def delete_closed_trade(self, ticket: int) -> bool:
