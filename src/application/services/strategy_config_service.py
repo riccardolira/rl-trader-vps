@@ -96,6 +96,56 @@ class StrategyConfigService:
             return True
         return False
 
+    async def walk_forward_optimize(self, min_trades: int = 20):
+        """B1 — Walk-Forward Optimization: ajusta weight_multiplier baseado no Sharpe de cada estratégia.
+        Chame periodicamente (ex: 1x/dia) para auto-calibrar pesos.
+        - Sharpe < 0  → reduz peso em 20% (min 0.5)
+        - Sharpe > 1.0 → aumenta peso em 10% (max 2.0)
+        - Entre 0 e 1.0 → mantém (sem dados suficientes para ajustar)
+        """
+        try:
+            from src.infrastructure.event_store import event_store
+            trades = await event_store.get_closed_trades(limit=500)
+            if len(trades) < min_trades:
+                log.info(f"WalkForward: poucos trades ({len(trades)} < {min_trades}). Pulando.")
+                return
+
+            needs_save = False
+            for strategy_name, cfg in self.config.strategies.items():
+                strat_trades = [t for t in trades if t.strategy_name == strategy_name]
+                if len(strat_trades) < 10:
+                    continue  # Menos de 10 trades — não ajusta
+
+                # Calcula Sharpe simples por trade (sem agrupar por dia)
+                profits = [t.profit for t in strat_trades]
+                avg_p = sum(profits) / len(profits)
+                std_p = (sum((p - avg_p) ** 2 for p in profits) / len(profits)) ** 0.5
+                sharpe = (avg_p / std_p) if std_p > 0 else 0.0
+
+                old_weight = cfg.weight_multiplier
+                new_weight = old_weight
+
+                if sharpe < 0:
+                    new_weight = max(0.5, round(old_weight * 0.8, 2))  # -20%
+                    log.warning(f"WalkForward: [{strategy_name}] Sharpe={sharpe:.2f} < 0 → weight {old_weight} → {new_weight}")
+                elif sharpe > 1.0:
+                    new_weight = min(2.0, round(old_weight * 1.1, 2))  # +10%
+                    log.info(f"WalkForward: [{strategy_name}] Sharpe={sharpe:.2f} > 1.0 → weight {old_weight} → {new_weight}")
+                else:
+                    log.debug(f"WalkForward: [{strategy_name}] Sharpe={sharpe:.2f} — peso mantido em {old_weight}")
+
+                if new_weight != old_weight:
+                    cfg.weight_multiplier = new_weight
+                    needs_save = True
+
+            if needs_save:
+                self._save_config(self.config)
+                log.info("WalkForward: strategy_config.json atualizado com novos pesos.")
+
+        except Exception as e:
+            log.error(f"WalkForward: Falha na otimização: {e}")
+
+
     def get_strategy_config(self, name: str) -> StrategyConfigItem:
         return self.config.strategies.get(name)
 

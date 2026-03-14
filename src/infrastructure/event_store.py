@@ -74,7 +74,6 @@ class EventStore(IPersistence):
     async def get_todays_realized_pnl(self) -> float:
         """Calculate the sum of profit for trades closed today."""
         try:
-            # Use SQLAlchemy func.date and inject python's date.today() for maximum compatibility
             stmt = select(func.coalesce(func.sum(TradeModel.profit), 0)).where(
                 TradeModel.status == 'CLOSED',
                 func.date(TradeModel.close_time) == date.today()
@@ -85,6 +84,94 @@ class EventStore(IPersistence):
         except Exception as e:
             log.error(f"EventStore: Failed to calculate daily PnL: {e}")
         return 0.0
+
+    @async_ttl_cache(ttl_seconds=60)
+    async def get_performance_metrics(self, days: int = 60) -> dict:
+        """B3: Calcula Sharpe, Sortino e Calmar Ratio dos últimos N dias.
+        Usa os trades fechados no banco — zero impacto de memória."""
+        import math
+        from datetime import timedelta
+        try:
+            trades = await self.get_closed_trades(limit=500)
+            if len(trades) < 5:
+                return {"sharpe": 0.0, "sortino": 0.0, "calmar": 0.0, "win_rate": 0.0, "avg_rr": 0.0, "trades_count": len(trades)}
+
+            # Agrupa lucro/perda por dia
+            from collections import defaultdict
+            daily_pnl: dict = defaultdict(float)
+            for t in trades:
+                day_key = t.close_time.date() if t.close_time else date.today()
+                daily_pnl[day_key] += t.profit
+
+            returns = list(daily_pnl.values())
+            if len(returns) < 3:
+                return {"sharpe": 0.0, "sortino": 0.0, "calmar": 0.0, "win_rate": 0.0, "avg_rr": 0.0, "trades_count": len(trades)}
+
+            avg_return = sum(returns) / len(returns)
+            std_dev = (sum((r - avg_return) ** 2 for r in returns) / len(returns)) ** 0.5
+            # Sharpe (risk-free = 0 para simplificar)
+            sharpe = (avg_return / std_dev) * (252 ** 0.5) if std_dev > 0 else 0.0
+
+            # Sortino (só desvio negativo)
+            neg_returns = [r for r in returns if r < 0]
+            downside_std = (sum(r ** 2 for r in neg_returns) / len(neg_returns)) ** 0.5 if neg_returns else 0.001
+            sortino = (avg_return / downside_std) * (252 ** 0.5)
+
+            # Calmar (retorno total / max drawdown)
+            cumulative = 0.0
+            peak = 0.0
+            max_dd = 0.0
+            for r in returns:
+                cumulative += r
+                peak = max(peak, cumulative)
+                dd = peak - cumulative
+                max_dd = max(max_dd, dd)
+            total_return = sum(returns)
+            calmar = total_return / max_dd if max_dd > 0 else 0.0
+
+            # Win Rate e R/R médio
+            wins = [t for t in trades if t.profit > 0]
+            losses = [t for t in trades if t.profit <= 0]
+            win_rate = len(wins) / len(trades)
+            avg_win = sum(t.profit for t in wins) / len(wins) if wins else 0
+            avg_loss = abs(sum(t.profit for t in losses) / len(losses)) if losses else 1
+            avg_rr = avg_win / avg_loss if avg_loss > 0 else 0.0
+
+            return {
+                "sharpe": round(sharpe, 3),
+                "sortino": round(sortino, 3),
+                "calmar": round(calmar, 3),
+                "win_rate": round(win_rate, 3),
+                "avg_rr": round(avg_rr, 2),
+                "max_drawdown": round(max_dd, 2),
+                "total_pnl": round(total_return, 2),
+                "trades_count": len(trades)
+            }
+        except Exception as e:
+            log.error(f"EventStore: get_performance_metrics failed: {e}")
+            return {"sharpe": 0.0, "sortino": 0.0, "calmar": 0.0, "win_rate": 0.0, "avg_rr": 0.0, "trades_count": 0}
+
+    @async_ttl_cache(ttl_seconds=300)
+    async def get_daily_var(self, confidence: float = 0.95) -> dict:
+        """B2: VaR histórico — perda máxima esperada no dia com N% de confiança.
+        Baseado nos retornos diários dos últimos 60 dias."""
+        try:
+            trades = await self.get_closed_trades(limit=500)
+            from collections import defaultdict
+            daily_pnl: dict = defaultdict(float)
+            for t in trades:
+                day_key = t.close_time.date() if t.close_time else date.today()
+                daily_pnl[day_key] += t.profit
+            returns = sorted(daily_pnl.values())
+            if len(returns) < 10:
+                return {"var_usd": 0.0, "confidence": confidence, "days_sample": len(returns)}
+            idx = int((1 - confidence) * len(returns))
+            var_usd = abs(returns[idx])
+            return {"var_usd": round(var_usd, 2), "confidence": confidence, "days_sample": len(returns)}
+        except Exception as e:
+            log.error(f"EventStore: get_daily_var failed: {e}")
+            return {"var_usd": 0.0, "confidence": confidence, "days_sample": 0}
+
 
     async def upsert_trade(self, trade: Trade):
         """Insert or Update a trade record."""

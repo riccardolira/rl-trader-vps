@@ -7,6 +7,7 @@ from src.infrastructure.mt5_adapter import mt5_adapter
 from datetime import datetime
 import json
 import os
+import math
 
 from src.infrastructure.news.news_worker import news_worker
 
@@ -97,6 +98,73 @@ class GuardianService:
         event_bus.subscribe("ORDER_DRAFTED", self.on_order_drafted)
         log.info("GuardianService listening for Drafts.")
 
+    # =========================================================
+    # A1 — PORTFOLIO HEAT: risco total de todas as posições abertas
+    # =========================================================
+    async def get_portfolio_heat(self) -> dict:
+        """Calcula o risco $ total de todas as posições abertas somadas.
+        Retorna dict com heat_usd, heat_pct_equity e positions_count."""
+        try:
+            positions = await mt5_adapter.get_positions()
+            account = await mt5_adapter.get_account_info()
+            equity = account.equity if account else 1.0
+            total_heat = 0.0
+            for p in (positions or []):
+                sl = getattr(p, 'sl', 0.0) or 0.0
+                price = getattr(p, 'open_price', getattr(p, 'price_open', 0.0)) or 0.0
+                volume = getattr(p, 'volume', 0.01)
+                pt_val = getattr(p, 'point_value', 1.0) or 1.0
+                if sl > 0 and price > 0:
+                    dist = abs(price - sl)
+                    total_heat += dist * volume * pt_val
+            return {
+                "heat_usd": round(total_heat, 2),
+                "heat_pct": round((total_heat / equity) * 100, 2) if equity > 0 else 0.0,
+                "positions_count": len(positions or []),
+                "equity": round(equity, 2)
+            }
+        except Exception as e:
+            log.warning(f"GuardianService: Erro ao calcular portfolio heat: {e}")
+            return {"heat_usd": 0.0, "heat_pct": 0.0, "positions_count": 0, "equity": 0.0}
+
+    # =========================================================
+    # A2 — KELLY CRITERION: volume dinâmico baseado no histórico
+    # =========================================================
+    async def get_kelly_volume(self, strategy_name: str, base_volume: float, equity: float) -> float:
+        """Calcula o volume ideal pelo half-Kelly Criterion.
+        f* = W - (1-W)/R   onde W=win_rate, R=avg_rr
+        Volume = equity * half_f* * risk_pct / 100
+        Retorna o volume calculado (com floor no base_volume mínimo)."""
+        try:
+            from src.infrastructure.event_store import event_store
+            trades = await event_store.get_closed_trades(limit=200)
+            strat_trades = [t for t in trades if t.strategy_name == strategy_name]
+            if len(strat_trades) < 20:  # Mínimo de 20 trades para ativar
+                return base_volume  # Dados insuficientes — usa volume base
+
+            wins = [t for t in strat_trades if t.profit > 0]
+            losses = [t for t in strat_trades if t.profit <= 0]
+            win_rate = len(wins) / len(strat_trades)
+
+            avg_win = sum(t.profit for t in wins) / len(wins) if wins else 0
+            avg_loss = abs(sum(t.profit for t in losses) / len(losses)) if losses else 1
+            avg_rr = avg_win / avg_loss if avg_loss > 0 else 1.0
+
+            kelly_f = win_rate - (1 - win_rate) / avg_rr
+            half_kelly = max(0.01, kelly_f * 0.5)  # Half-Kelly conservador
+            half_kelly = min(half_kelly, 0.05)     # Cap: máx 5% do equity por trade
+
+            risk_pct = getattr(self.config, 'risk_per_trade_pct', 1.0) / 100.0
+            kelly_volume = round(equity * half_kelly * risk_pct / 100, 2)
+            kelly_volume = max(base_volume, min(kelly_volume, self.config.max_lot_size))
+
+            log.info(f"Kelly [{strategy_name}]: WR={win_rate:.1%} R/R={avg_rr:.2f} f*={kelly_f:.3f} → vol={kelly_volume}")
+            return kelly_volume
+        except Exception as e:
+            log.warning(f"GuardianService: Kelly falhou para {strategy_name}: {e}")
+            return base_volume
+
+
     def get_state(self) -> dict:
         """Expose internal state for UI."""
         # Calcula drawdown diário real a partir dos trades fechados hoje
@@ -131,18 +199,30 @@ class GuardianService:
              
         log.info(f"Guardian processing draft {draft.id} for {draft.symbol}")
 
-        # --- GATE 0: News Check (Phase 3) ---
+        # --- GATE 0: News Check ---
         if self.config.news_filter_active:
             is_frozen, _, msg = news_worker.is_symbol_frozen(draft.symbol)
             if is_frozen:
                 await event_bus.publish(OrderRejected(
-                    reason=msg,
-                    draft=draft,
-                    gate="GATE_NEWS_BLACKOUT",
-                    component="GuardianService"
+                    reason=msg, draft=draft,
+                    gate="GATE_NEWS_BLACKOUT", component="GuardianService"
                 ))
                 log.warning(f"Guardian REJECTED draft {draft.id}: {msg}")
                 return
+
+        # --- GATE 0.5: Portfolio Heat Check (A1) ---
+        try:
+            heat = await self.get_portfolio_heat()
+            heat_limit = getattr(self.config, 'portfolio_heat_max_pct', 6.0)  # 6% default
+            if heat["heat_pct"] > heat_limit:
+                await event_bus.publish(OrderRejected(
+                    reason=f"Portfolio Heat {heat['heat_pct']:.1f}% > limit {heat_limit}%. Risco total muito alto.",
+                    draft=draft, gate="GATE_PORTFOLIO_HEAT", component="GuardianService"
+                ))
+                log.warning(f"Guardian REJECTED draft {draft.id}: Portfolio Heat {heat['heat_pct']:.1f}% (max {heat_limit}%)")
+                return
+        except Exception as heat_err:
+            log.warning(f"Guardian: Portfolio heat check failed: {heat_err}")
 
         # --- GATE 1: Max Open Trades Check ---
         try:

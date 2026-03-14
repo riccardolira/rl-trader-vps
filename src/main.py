@@ -33,6 +33,19 @@ def create_app() -> FastAPI:
     async def startup_event():
         log.info("FastAPI Starting up...")
         asyncio.create_task(engine.boot())
+
+        # B1: Walk-Forward — roda 1x/dia para auto-calibrar pesos das estratégias
+        async def _walk_forward_loop():
+            await asyncio.sleep(300)  # espera 5 min após boot
+            while True:
+                try:
+                    from src.application.services.strategy_config_service import strategy_config_service
+                    await strategy_config_service.walk_forward_optimize()
+                except Exception as wf_err:
+                    log.warning(f"WalkForward agendado: {wf_err}")
+                await asyncio.sleep(86400)  # 1x/dia
+        asyncio.create_task(_walk_forward_loop())
+
         
     @app.on_event("shutdown")
     async def shutdown_event():

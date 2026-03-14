@@ -229,12 +229,51 @@ class MarketDataService:
         
         # Volume Flow Metrics (For Order Flow Strategy)
         tick_vol = df['tick_volume']
-        # Use simple moving average of volume over 20 periods
         vma_20 = tick_vol.rolling(window=20).mean().iloc[-1]
         current_vol = tick_vol.iloc[-1]
-        # Ratio: How many times greater is current volume vs average
         vol_spike_ratio = (current_vol / vma_20) if vma_20 > 0 else 0.0
-        
+
+        # === C2: VWAP intraday (preço médio ponderado por volume) ===
+        # Aproximação com as últimas 24 barras H1 (= 1 dia de trading)
+        try:
+            vwap_bars = min(24, len(df))
+            df_vwap = df.iloc[-vwap_bars:]
+            typical_price = (df_vwap['high'] + df_vwap['low'] + df_vwap['close']) / 3
+            vwap = (typical_price * df_vwap['tick_volume']).sum() / df_vwap['tick_volume'].sum()
+            vwap = float(vwap) if not np.isnan(vwap) else float(closes.iloc[-1])
+        except Exception:
+            vwap = float(closes.iloc[-1])
+
+        # === C1: Hurst Exponent via R/S Analysis ===
+        # H > 0.6 = trending | H ≈ 0.5 = random | H < 0.4 = mean-reverting
+        try:
+            hurst = 0.5  # default = random walk
+            hurst_series = closes.values[-min(100, len(closes)):]
+            if len(hurst_series) >= 20:
+                lags = [2, 4, 8, 16, 32]
+                rs_values = []
+                for lag in lags:
+                    if lag >= len(hurst_series):
+                        continue
+                    chunks = [hurst_series[i:i+lag] for i in range(0, len(hurst_series)-lag, lag)]
+                    rs_per_chunk = []
+                    for chunk in chunks:
+                        mean_c = np.mean(chunk)
+                        deviations = np.cumsum(chunk - mean_c)
+                        r = np.max(deviations) - np.min(deviations)
+                        s = np.std(chunk, ddof=1)
+                        if s > 0:
+                            rs_per_chunk.append(r / s)
+                    if rs_per_chunk:
+                        rs_values.append((np.log(lag), np.log(np.mean(rs_per_chunk))))
+                if len(rs_values) >= 3:
+                    x = np.array([v[0] for v in rs_values])
+                    y = np.array([v[1] for v in rs_values])
+                    hurst = float(np.polyfit(x, y, 1)[0])
+                    hurst = max(0.0, min(1.0, hurst))
+        except Exception:
+            hurst = 0.5
+
         return {
             "sma_20": float(sma_20),
             "rsi_14": float(rsi_14),
@@ -244,10 +283,13 @@ class MarketDataService:
             "bb_lower": float(bb_lower),
             "bb_width": float(bb_width),
             "bb_pct_b": float(bb_pct_b),
-            "squeeze_pct": float(squeeze_pct), # Low value implies Squeeze
+            "squeeze_pct": float(squeeze_pct),
             "tick_volume": float(current_vol),
             "vma_20": float(vma_20),
-            "vol_spike_ratio": float(vol_spike_ratio)
+            "vol_spike_ratio": float(vol_spike_ratio),
+            "vwap": vwap,                  # C2: VWAP intraday
+            "hurst": round(hurst, 3),      # C1: Hurst Exponent
         }
+
 
 market_data_service = MarketDataService()

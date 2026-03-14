@@ -136,6 +136,32 @@ class StrategyEngine:
             except Exception as e:
                 log.error(f"StrategyEngine: Strategy {strategy.name} failed for {symbol}: {e}")
 
+        # === A3: ENSEMBLE SCORE — Consenso multi-estratégia ===
+        # Conta quantas estratégias concordam no mesmo lado do vencedor
+        if candidates:
+            for c in candidates:
+                c_side = getattr(c, 'side', None)
+            top_side = candidates[0].side if candidates else None
+            agree_count = sum(1 for c in candidates if c.side == top_side)
+            total_voting = len(candidates)
+
+            if total_voting >= 3 and agree_count >= 3:
+                # Consenso forte (3+ concordam) — bônus de confiança
+                bonus = 10.0
+                candidates[0] = candidates[0].copy(update={
+                    "final_score": candidates[0].final_score + bonus,
+                    "reason_code": candidates[0].reason_code + f" | ENSEMBLE_STRONG({agree_count}/{total_voting})"
+                })
+                log.info(f"StrategyEngine: ENSEMBLE STRONG consensus {agree_count}/{total_voting} for {symbol} {top_side} → +{bonus} bonus")
+            elif agree_count == 1 and total_voting >= 3:
+                # Sem consenso (só 1 de 3+ concorda) — penalidade
+                penalty = 10.0
+                candidates[0] = candidates[0].copy(update={
+                    "final_score": max(0, candidates[0].final_score - penalty),
+                    "reason_code": candidates[0].reason_code + f" | ENSEMBLE_WEAK(1/{total_voting})"
+                })
+                log.debug(f"StrategyEngine: ENSEMBLE WEAK singular signal for {symbol} → -{penalty} penalty")
+
         # 3. Winner Selection (Winner Takes All + Tie Break)
         if not candidates:
             return

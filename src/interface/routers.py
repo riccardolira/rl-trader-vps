@@ -78,12 +78,32 @@ async def get_analytics_insights(start_dt: Optional[datetime] = None, end_dt: Op
     """Returns AI generated insights about the trading history."""
     from src.services.stats.recommendation_engine import recommendation_engine
     from src.services.stats.stats_service import stats_service
-    
-    # Fetch current metrics to feed the engine
     dashboard_data = await stats_service.get_dashboard_data(start_dt=start_dt, end_dt=end_dt)
     metrics = dashboard_data.get("metrics", {})
-    
     return recommendation_engine.generate_insights(metrics)
+
+# === Novos endpoints de Risk Analytics (Batch A/B) ===
+
+@router.get("/api/analytics/portfolio-heat")
+async def get_portfolio_heat():
+    """A1: Risco total ($) de todas as posições abertas somadas.
+    Retorna heat_usd, heat_pct do equity e contagem de posições."""
+    from src.application.services.guardian_service import guardian_service
+    return await guardian_service.get_portfolio_heat()
+
+@router.get("/api/analytics/var")
+async def get_value_at_risk(confidence: float = 0.95):
+    """B2: VaR histórico — perda máxima esperada no dia com { confidence*100 }% de confiança.
+    Baseado nos retornos diários dos últimos trades fechados."""
+    return await event_store.get_daily_var(confidence=confidence)
+
+@router.get("/api/analytics/performance")
+async def get_performance_metrics():
+    """B3: Métricas de performance: Sharpe, Sortino, Calmar, Win Rate, R/R médio.
+    Calculadas a partir dos trades fechados no banco."""
+    return await event_store.get_performance_metrics()
+
+
 
 @router.get("/api/analytics/transparency")
 async def get_analytics_transparency():
