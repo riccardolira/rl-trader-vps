@@ -1,37 +1,64 @@
 @echo off
-echo ==================================================
-echo RL TRADER - VPS Update Script
-echo ==================================================
+setlocal EnableDelayedExpansion
+chcp 65001 > nul
+
+echo.
+echo  ██████  ██      ████████ ██████   █████  ██████  ███████ ██████ 
+echo  ██   ██ ██         ██    ██   ██ ██   ██ ██   ██ ██      ██   ██
+echo  ██████  ██         ██    ██████  ███████ ██   ██ █████   ██████ 
+echo  ██   ██ ██         ██    ██   ██ ██   ██ ██   ██ ██      ██   ██
+echo  ██   ██ ███████    ██    ██   ██ ██   ██ ██████  ███████ ██   ██
+echo.
+echo  VPS Update Script  —  RL Trader V4
+echo  =====================================================
 echo.
 
-echo [1/3] Fetching latest updates from GitHub...
-
-:: Config files are now untracked (.gitignore). No need to backup and restore them here.
-:: The backend automatically generates them from defaults if missing.
-
+:: ─────────────────────────────────────────────────────
+:: STEP 1 — Git Pull
+:: ─────────────────────────────────────────────────────
+echo [1/4] Baixando atualizações do GitHub...
 git fetch origin
 git reset --hard origin/main
 
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] Git pull failed! Please check your connection or resolve conflicts.
+    echo  [ERRO] Git pull falhou! Verifique a conexão ou conflitos.
     pause
     exit /b %errorlevel%
 )
-
-echo [OK] Update downloaded successfully.
+echo  [OK] Código atualizado.
 echo.
 
-echo [2/3] Installing/Updating Python Dependencies...
-pip install -r requirements.txt
-echo [OK] Dependencies updated.
+:: ─────────────────────────────────────────────────────
+:: STEP 2 — Python Dependencies
+:: ─────────────────────────────────────────────────────
+echo [2/4] Instalando/Atualizando dependências Python...
+pip install -r requirements.txt -q
+if %errorlevel% neq 0 (
+    echo  [AVISO] pip install retornou erro. Verifique requirements.txt.
+)
+echo  [OK] Dependências OK.
 echo.
 
-echo [3/3] Restarting Services...
-echo Please ensure that any running instances of start_v3.bat are closed.
-echo You can now run start_v3.bat to launch the updated system.
+:: ─────────────────────────────────────────────────────
+:: STEP 3 — SQLite Repair (cria tabelas faltando)
+:: ─────────────────────────────────────────────────────
+echo [3/4] Verificando/Reparando banco de dados SQLite...
+python repair_sqlite.py
+if %errorlevel% neq 0 (
+    echo  [AVISO] repair_sqlite.py retornou erro. Verifique o DB.
+) else (
+    echo  [OK] Banco de dados OK.
+)
 echo.
-echo ==================================================
-echo UPDATE COMPLETE
-echo ==================================================
+
+:: ─────────────────────────────────────────────────────
+:: STEP 4 — Done
+:: ─────────────────────────────────────────────────────
+echo  =====================================================
+echo  [CONCLUIDO] Update finalizado com sucesso!
+echo  =====================================================
+echo.
+echo  Proximo passo: execute start_v3.bat para iniciar o sistema.
+echo.
 pause
