@@ -17,6 +17,7 @@ class GuardianService:
         self.config_path = "risk_config.json"
         self.config = self._load_config()
         self._pending_orders = [] # list of floats (timestamps)
+        self._kelly_cache: dict = {}  # {strategy_name: (volume, timestamp)}
         self._check_credentials()
 
     def _check_credentials(self):
@@ -137,6 +138,13 @@ class GuardianService:
         Retorna o volume calculado (com floor no base_volume mínimo)."""
         try:
             from src.infrastructure.event_store import event_store
+            # Cache por 5 minutos por estratégia — evita query dupla se ordens chegarem em rajada
+            import time as _time
+            cache_key = strategy_name
+            cached = self._kelly_cache.get(cache_key)
+            if cached and (_time.time() - cached[1]) < 300:  # 5 min TTL
+                return cached[0]
+
             trades = await event_store.get_closed_trades(limit=200)
             strat_trades = [t for t in trades if t.strategy_name == strategy_name]
             if len(strat_trades) < 20:  # Mínimo de 20 trades para ativar
@@ -159,6 +167,7 @@ class GuardianService:
             kelly_volume = max(base_volume, min(kelly_volume, self.config.max_lot_size))
 
             log.info(f"Kelly [{strategy_name}]: WR={win_rate:.1%} R/R={avg_rr:.2f} f*={kelly_f:.3f} → vol={kelly_volume}")
+            self._kelly_cache[cache_key] = (kelly_volume, _time.time())  # guarda no cache
             return kelly_volume
         except Exception as e:
             log.warning(f"GuardianService: Kelly falhou para {strategy_name}: {e}")
