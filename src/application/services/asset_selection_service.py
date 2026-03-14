@@ -300,12 +300,12 @@ class AssetSelectionService:
                 self._reasons.blocked += 1
                 continue
                 
-            # Symbol Timetable Check (Fast Fail)
+            # Symbol Timetable Check — não rejeita do painel, apenas marca como fora de horário
             if not self._is_within_symbol_timetable(symbol, asset_class, path):
                  self._reasons.out_of_hours += 1
                  ranking_candidates.append(RankingRow(
-                    symbol=symbol, asset_class=asset_class, rank=0, status=AssetStatus.HARD_REJECT,
-                    reason_code="OUT_OF_HOURS", specification=f"Outside trading hours",
+                    symbol=symbol, asset_class=asset_class, rank=0, status=AssetStatus.OUT_OF_HOURS,
+                    reason_code="OUT_OF_HOURS", specification="Fora do horário de negociação",
                     metrics=AssetMetrics(), score_breakdown=ScoreBreakdown(),
                     computed_at=datetime.utcnow(), cycle_id=self._cycle_id
                  ))
@@ -459,7 +459,8 @@ class AssetSelectionService:
         # 3. Update Active Set
         if self.config.selection_mode == SelectionMode.AUTO:
             if self._counts.eligible_count >= self.config.min_active_set_size:
-                 valid_candidates = [r for r in ranking_candidates if r.status != AssetStatus.HARD_REJECT]
+                 # Exclui HARD_REJECT e OUT_OF_HOURS do active_set — só elegíveis entram no engine
+                 valid_candidates = [r for r in ranking_candidates if r.status not in (AssetStatus.HARD_REJECT, AssetStatus.OUT_OF_HOURS)]
                  await self._update_active_set_auto(valid_candidates)
             else:
                  log.warning(f"Scanner Cycle: Skipping Auto Update. Eligible ({self._counts.eligible_count}) < Minimum ({self.config.min_active_set_size})")

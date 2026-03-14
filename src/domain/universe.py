@@ -44,6 +44,7 @@ class AssetStatus(str, Enum):
     ELIGIBLE = "ELIGIBLE"
     WARN = "WARN"
     HARD_REJECT = "HARD_REJECT"
+    OUT_OF_HOURS = "OUT_OF_HOURS"  # Ativo visível no painel mas fora do horário de negociação
 
 class ScoreBreakdown(BaseModel):
     liquidity: float = 0.0
