@@ -18,6 +18,11 @@ interface Trade {
     close_time: string;
     profit: number;
     status: string;
+    strategy_name?: string;
+    reason_code?: string;
+    score_signal?: number;
+    commission?: number;
+    swap?: number;
 }
 
 interface HistoryResponse {
@@ -239,6 +244,22 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ dataOverride, onDele
                                             </div>
                                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 font-mono">
                                                 <Clock size={12} className="text-muted-foreground/70" /> {timeStr} • #{trade.ticket}
+                                            </div>
+                                            {/* Diário: razão + estratégia + score */}
+                                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                                {trade.strategy_name && (
+                                                    <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded font-bold">{trade.strategy_name}</span>
+                                                )}
+                                                {trade.reason_code && (
+                                                    <span className="text-[10px] bg-muted/50 text-muted-foreground border border-border/40 px-1.5 py-0.5 rounded font-mono">{trade.reason_code}</span>
+                                                )}
+                                                {trade.score_signal != null && (
+                                                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-bold border",
+                                                        trade.score_signal >= 70 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                        trade.score_signal >= 50 ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                        "bg-muted/50 text-muted-foreground border-border/40"
+                                                    )}>score {trade.score_signal.toFixed(0)}</span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

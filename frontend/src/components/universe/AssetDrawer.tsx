@@ -1,6 +1,7 @@
 import React from 'react';
 import type { RankingRow } from '../../services/api';
-import { X, Activity, Scale, Database } from 'lucide-react';
+import { X, Activity, Scale, Database, TrendingUp, GitCompare, RefreshCcw } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 interface DrawerProps {
     asset: RankingRow;
@@ -83,6 +84,39 @@ export const AssetDrawer: React.FC<DrawerProps> = ({ asset, onClose }) => {
                         </div>
                     </div>
                 </section>
+
+                {/* Hurst Exponent Badge */}
+                {(asset.data as any)?.hurst != null && (() => {
+                    const h: number = (asset.data as any).hurst;
+                    const isT = h > 0.55;
+                    const isMR = h < 0.45;
+                    const label = isT ? 'TRENDING' : isMR ? 'MEAN-REV' : 'RANDOM';
+                    const Icon = isT ? TrendingUp : isMR ? RefreshCcw : GitCompare;
+                    const color = isT
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        : isMR
+                        ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                        : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
+                    return (
+                        <section>
+                            <h3 className="text-sm font-bold text-muted-foreground uppercase mb-2 flex items-center gap-2">
+                                <TrendingUp size={14} /> Hurst Exponent
+                            </h3>
+                            <div className={cn("flex items-center gap-3 px-4 py-3 rounded-xl border font-bold", color)}>
+                                <Icon size={20} className="shrink-0" />
+                                <div>
+                                    <p className="text-lg font-black font-mono">{h.toFixed(3)}</p>
+                                    <p className="text-[11px] uppercase tracking-widest font-bold opacity-80">{label}</p>
+                                </div>
+                                <div className="ml-auto text-[10px] text-right opacity-70 leading-relaxed">
+                                    {isT  && <><b>&gt;0.55</b><br/>Persistência</>}
+                                    {isMR && <><b>&lt;0.45</b><br/>Anti-persistência</>}
+                                    {!isT && !isMR && <><b>~0.50</b><br/>Browniano</>}
+                                </div>
+                            </div>
+                        </section>
+                    );
+                })()}
 
                 {/* Data Health */}
                 <section>
