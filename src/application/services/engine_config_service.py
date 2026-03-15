@@ -35,7 +35,7 @@ class TieBreakConfig(BaseModel):
 
 class ScanConfig(BaseModel):
     """Strategy Engine scan settings."""
-    interval_sec: int = 60           # Intervalo entre ciclos de análise (segundos)
+    interval_sec: float = 60           # Intervalo entre ciclos de análise (segundos)
     symbol_delay_sec: float = 0.5    # Delay entre análise de cada símbolo (throttle MT5)
 
 

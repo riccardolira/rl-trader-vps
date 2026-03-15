@@ -1,4 +1,5 @@
 from src.domain.models import Signal, DraftOrder, OrderSide, get_asset_class, InstrumentType
+from src.domain.events import BaseEvent
 from src.domain.events import SignalGenerated, OrderDrafted
 from src.infrastructure.event_bus import event_bus
 from src.infrastructure.logger import log
@@ -43,7 +44,7 @@ class ArbiterService:
         snap = asset_selection_service.get_snapshot()
         if snap.gate_status != GateStatus.OPEN:
             log.warning(f"Arbiter: TRADE_BLOCKED_NO_ACTIVE_SET ({signal.symbol}) - Gate Reason: {snap.gate_reason}")
-            event_bus.publish("universe.trade_blocked", {"symbol": signal.symbol, "reason": snap.gate_reason})
+            await event_bus.publish(BaseEvent(type="UNIVERSE_TRADE_BLOCKED", component="ArbiterService", payload={"symbol": signal.symbol, "reason": snap.gate_reason}))
             return
 
         # 0.5 Anti-Stacking Check (Max X Open Trades per Symbol)
@@ -69,7 +70,7 @@ class ArbiterService:
         
         if total_count >= max_allowed:
             log.warning(f"Arbiter: REJECTED {signal.symbol} - Symbol reached limit of {max_allowed} open positions (Active: {symbol_trades_count}, Pending: {pending_count}).")
-            event_bus.publish("arbiter.trade_rejected", {"symbol": signal.symbol, "reason": f"Max {max_allowed} Positions Reached"})
+            await event_bus.publish(BaseEvent(type="ARBITER_TRADE_REJECTED", component="ArbiterService", payload={"symbol": signal.symbol, "reason": f"Max {max_allowed} Positions Reached"}))
             return
 
         # Record this draft as pending to prevent concurrent signals from bypassing the limit
@@ -77,7 +78,7 @@ class ArbiterService:
 
         # 1. Score Filter
         asset_class_str = get_asset_class(signal.symbol)
-        profile = guardian_service.config.profiles.get(asset_class_str.value)
+        profile = guardian_service.config.profiles.get(asset_class_str.value if hasattr(asset_class_str, 'value') else asset_class_str)
         
         # Determine dynamic min score
         dynamic_min_score = self.min_score
@@ -195,7 +196,7 @@ class ArbiterService:
                          volume = settings.EXECUTION_MIN_LOT
                     else:
                          log.warning(f"Arbiter: Rejeitado. Lote minimo ({settings.EXECUTION_MIN_LOT}) causaria perda de ${loss_with_min_lot:.2f} (Acima do Cap de ${hard_cap:.2f}).")
-                         event_bus.publish("arbiter.trade_rejected", {"symbol": signal.symbol, "reason": f"Risco Excessivo: SL (${loss_with_min_lot:.2f}) excede Hard Cap"})
+                         await event_bus.publish(BaseEvent(type="ARBITER_TRADE_REJECTED", component="ArbiterService", payload={"symbol": signal.symbol, "reason": f"Risco Excessivo: SL (${loss_with_min_lot:.2f}) excede Hard Cap"}))
                          # Remove from pending since it was rejected
                          if self._pending_drafts[signal.symbol]:
                              self._pending_drafts[signal.symbol].pop()

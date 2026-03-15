@@ -18,7 +18,6 @@ from src.application.services.asset_selection_service import asset_selection_ser
 # Original locations (didn't move yet)
 # from src.application.services.scanner_service import scanner_service
 from src.application.services.arbiter_service import arbiter_service
-from src.application.services.arbiter_service import arbiter_service
 from src.application.services.guardian_service import guardian_service
 # from src.application.services.news_service import news_service # Deprecated Phase 3
 from src.infrastructure.news.news_worker import news_worker

@@ -51,7 +51,7 @@ async def get_state():
     from src.application.services.strategy_engine import strategy_engine
     from src.application.services.arbiter_service import arbiter_service
     from src.services.execution.execution_service import execution_service
-    from src.services.health.guardian_service import guardian_service
+    from src.application.services.guardian_service import guardian_service
     
     return {
         "engine": "RUNNING",

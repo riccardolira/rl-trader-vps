@@ -86,7 +86,7 @@ class GuardianService:
         return config
 
     def update_config(self, updates: dict):
-        current = self.config.dict()
+        current = self.config.model_dump()
         current.update(updates)
         self.config = RiskConfig(**current)
         try:
@@ -99,6 +99,20 @@ class GuardianService:
     async def start(self):
         event_bus.subscribe("ORDER_DRAFTED", self.on_order_drafted)
         log.info("GuardianService listening for Drafts.")
+        # BUG-05 fix: Periodic task to keep _cached_daily_dd fresh for get_state()
+        import asyncio
+        asyncio.create_task(self._update_daily_dd_loop())
+
+    async def _update_daily_dd_loop(self):
+        """Atualiza _cached_daily_dd a cada 60 segundos para o dashboard."""
+        while True:
+            try:
+                from src.infrastructure.event_store import event_store
+                self._cached_daily_dd = await event_store.get_todays_realized_pnl()
+            except Exception:
+                pass
+            import asyncio as _asyncio
+            await _asyncio.sleep(60)
 
     # =========================================================
     # A1 — PORTFOLIO HEAT: risco total de todas as posições abertas
@@ -168,7 +182,7 @@ class GuardianService:
             half_kelly = min(half_kelly, ecfg.max_kelly_pct / 100.0)  # Cap configurável
 
             risk_pct = getattr(self.config, 'risk_per_trade_pct', 1.0) / 100.0
-            kelly_volume = round(equity * half_kelly * risk_pct / 100, 2)
+            kelly_volume = round(equity * half_kelly * risk_pct, 2)  # BUG-07 fix: was /100 twice
             kelly_volume = max(base_volume, min(kelly_volume, self.config.max_lot_size))
 
             log.info(f"Kelly [{strategy_name}]: WR={win_rate:.1%} R/R={avg_rr:.2f} f*={kelly_f:.3f} half={ecfg.half_kelly_fraction} cap={ecfg.max_kelly_pct}% → vol={kelly_volume}")
@@ -198,8 +212,8 @@ class GuardianService:
             daily_dd = 0.0
             
         return {
-            "config": self.config.dict(),
-            "daily_drawdown": daily_dd,
+            "config": self.config.model_dump(),
+            "daily_drawdown": getattr(self, '_cached_daily_dd', 0.0),
             "orders_approved_today": getattr(self, '_orders_approved_today', 0)
         }
 
