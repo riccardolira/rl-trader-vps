@@ -70,6 +70,7 @@ NEW_TRADE_COLUMNS = [
     ("is_market_closed",          "INTEGER DEFAULT 0"),
     ("minutes_until_close",       "REAL"),
     ("asset_class",               "TEXT"),
+    ("market_context",            "TEXT"),
 ]
 
 existing_cols = {row[1] for row in cur.execute("PRAGMA table_info(trades)")}

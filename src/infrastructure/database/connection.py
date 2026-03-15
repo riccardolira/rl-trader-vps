@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS trades (
     trailing_stop_activated  INTEGER DEFAULT 0,
     is_market_closed         INTEGER DEFAULT 0,
     minutes_until_close      REAL,
-    asset_class              TEXT
+    asset_class              TEXT,
+    market_context           TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_trades_status   ON trades(status);
 CREATE INDEX IF NOT EXISTS idx_trades_symbol   ON trades(symbol);
@@ -108,10 +109,31 @@ class DatabasePool:
                 # Done outside SQLAlchemy engine because executescript requires sqlite3 native
                 import aiosqlite
                 async with aiosqlite.connect(SQLITE_FALLBACK_DB) as _db:
+                    # 1. Create tables if they don't exist
                     await _db.executescript(SQLITE_DDL)
+                    # 2. Add any missing columns to existing tables (ALTER TABLE migration)
+                    _migrations = [
+                        ("trades", "strategy_name",           "TEXT"),
+                        ("trades", "commission",              "REAL DEFAULT 0.0"),
+                        ("trades", "swap",                    "REAL DEFAULT 0.0"),
+                        ("trades", "reason_code",             "TEXT"),
+                        ("trades", "score_signal",            "REAL"),
+                        ("trades", "break_even_activated",    "INTEGER DEFAULT 0"),
+                        ("trades", "trailing_stop_activated", "INTEGER DEFAULT 0"),
+                        ("trades", "is_market_closed",        "INTEGER DEFAULT 0"),
+                        ("trades", "minutes_until_close",     "REAL"),
+                        ("trades", "asset_class",             "TEXT"),
+                        ("trades", "market_context",          "TEXT"),
+                    ]
+                    for table, col, col_type in _migrations:
+                        cur = await _db.execute(f"PRAGMA table_info({table})")
+                        existing = {row[1] async for row in cur}
+                        if col not in existing:
+                            await _db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
+                            log.info(f"[SQLite migration] {table}.{col} adicionado")
                     await _db.commit()
                 self.is_mysql = False
-                log.info(f"Connected to SQLite: {SQLITE_FALLBACK_DB} (WAL + DDL auto-applied)")
+                log.info(f"Connected to SQLite: {SQLITE_FALLBACK_DB} (WAL + DDL + migrations auto-applied)")
         return self.engine
 
     async def close(self):
