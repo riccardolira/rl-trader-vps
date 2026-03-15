@@ -12,7 +12,7 @@ import sys
 import os
 from datetime import datetime
 
-DB_FILE = "rl_trader_v3.db"
+DB_FILE = "rl_trader_audit.db"  # Deve ser igual a SQLITE_FALLBACK_DB em connection.py
 
 # Permite passar outro arquivo via argumento
 if len(sys.argv) > 2 and sys.argv[1] == "--db":

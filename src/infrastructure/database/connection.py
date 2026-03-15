@@ -4,6 +4,77 @@ from src.infrastructure.logger import log
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy import text
 
+# Canonical SQLite fallback DB filename — must stay in sync with repair_sqlite.py
+SQLITE_FALLBACK_DB = "rl_trader_audit.db"
+
+SQLITE_DDL = """
+CREATE TABLE IF NOT EXISTS audit_events (
+    id             TEXT     PRIMARY KEY,
+    timestamp      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    type           TEXT     NOT NULL,
+    component      TEXT     NOT NULL,
+    severity       TEXT     NOT NULL,
+    correlation_id TEXT,
+    payload_json   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_events_ts   ON audit_events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_events_type ON audit_events(type);
+
+CREATE TABLE IF NOT EXISTS trades (
+    ticket                   INTEGER PRIMARY KEY,
+    symbol                   TEXT    NOT NULL,
+    side                     TEXT    NOT NULL,
+    volume                   REAL    NOT NULL,
+    open_price               REAL    NOT NULL,
+    open_time                DATETIME NOT NULL,
+    sl                       REAL,
+    tp                       REAL,
+    close_price              REAL,
+    close_time               DATETIME,
+    profit                   REAL,
+    status                   TEXT    NOT NULL DEFAULT 'OPEN',
+    magic                    INTEGER,
+    comment                  TEXT,
+    strategy_name            TEXT,
+    commission               REAL    DEFAULT 0.0,
+    swap                     REAL    DEFAULT 0.0,
+    reason_code              TEXT,
+    score_signal             REAL,
+    break_even_activated     INTEGER DEFAULT 0,
+    trailing_stop_activated  INTEGER DEFAULT 0,
+    is_market_closed         INTEGER DEFAULT 0,
+    minutes_until_close      REAL,
+    asset_class              TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_trades_status   ON trades(status);
+CREATE INDEX IF NOT EXISTS idx_trades_symbol   ON trades(symbol);
+CREATE INDEX IF NOT EXISTS idx_trades_strat    ON trades(strategy_name);
+CREATE INDEX IF NOT EXISTS idx_trades_closetime ON trades(close_time);
+
+CREATE TABLE IF NOT EXISTS universe_assets (
+    symbol          TEXT PRIMARY KEY,
+    instrument_type TEXT,
+    active          INTEGER DEFAULT 1,
+    min_volume      REAL,
+    step_volume     REAL,
+    tick_size       REAL,
+    tick_value      REAL,
+    contract_size   REAL,
+    last_updated    DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS strategy_performance (
+    strategy_name     TEXT PRIMARY KEY,
+    total_trades      INTEGER DEFAULT 0,
+    wins              INTEGER DEFAULT 0,
+    losses            INTEGER DEFAULT 0,
+    total_profit      REAL    DEFAULT 0.0,
+    sharpe_ratio      REAL,
+    weight_multiplier REAL    DEFAULT 1.0,
+    last_updated      DATETIME
+);
+"""
+
 class DatabasePool:
     def __init__(self):
         self.engine: AsyncEngine = None
@@ -28,16 +99,19 @@ class DatabasePool:
                 self.is_mysql = True
             except Exception as e:
                 log.warning(f"Failed to connect to MySQL: {e}. Falling back to SQLite...")
-                url = "sqlite+aiosqlite:///rl_trader_audit.db"
-                self.engine = create_async_engine(
-                    url,
-                    echo=False
-                )
+                url = f"sqlite+aiosqlite:///{SQLITE_FALLBACK_DB}"
+                self.engine = create_async_engine(url, echo=False)
                 async with self.engine.begin() as conn:
                     await conn.execute(text("PRAGMA journal_mode=WAL;"))
                     await conn.execute(text("PRAGMA synchronous=NORMAL;"))
+                # Auto-create all tables via aiosqlite executescript (safe multi-statement DDL)
+                # Done outside SQLAlchemy engine because executescript requires sqlite3 native
+                import aiosqlite
+                async with aiosqlite.connect(SQLITE_FALLBACK_DB) as _db:
+                    await _db.executescript(SQLITE_DDL)
+                    await _db.commit()
                 self.is_mysql = False
-                log.info("Connected to local SQLite database: rl_trader_audit.db (WAL Mode Enabled) via SQLAlchemy")
+                log.info(f"Connected to SQLite: {SQLITE_FALLBACK_DB} (WAL + DDL auto-applied)")
         return self.engine
 
     async def close(self):
