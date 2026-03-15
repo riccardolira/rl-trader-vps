@@ -89,7 +89,7 @@ class StrategyConfigService:
 
     def update_strategy(self, name: str, updates: dict):
         if name in self.config.strategies:
-            current_cfg = self.config.strategies[name].dict()
+            current_cfg = self.config.strategies[name].model_dump()
             current_cfg.update(updates)
             self.config.strategies[name] = StrategyConfigItem(**current_cfg)
             self._save_config(self.config)

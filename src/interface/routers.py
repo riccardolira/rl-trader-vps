@@ -114,7 +114,7 @@ async def get_analytics_transparency():
 @router.get("/api/trades/active")
 async def get_active_trades():
     trades = await event_store.get_active_trades()
-    return {"count": len(trades), "trades": [t.dict() for t in trades]}
+    return {"count": len(trades), "trades": [t.model_dump() for t in trades]}
 
 @router.get("/api/trades/history")
 async def get_trades_history(limit: int = 100):
@@ -130,7 +130,7 @@ async def get_trades_history(limit: int = 100):
         "count": len(trades), 
         "total_pnl": round(total_pnl, 2), 
         "win_rate": round(win_rate, 2), 
-        "trades": [t.dict() for t in trades]
+        "trades": [t.model_dump() for t in trades]
     }
 
 @router.delete("/api/trades/history/{ticket}")
@@ -160,7 +160,7 @@ async def get_account_info():
     from src.infrastructure.mt5_adapter import mt5_adapter
     info = await mt5_adapter.get_account_info()
     if info:
-        return info.dict()
+        return info.model_dump()
     return {"error": "Account info not available"}
 
 # --- Admin / Config Endpoints ---
@@ -224,13 +224,13 @@ async def stop_engine():
 @router.get("/api/risk/config")
 async def get_risk_config():
     from src.application.services.guardian_service import guardian_service
-    return guardian_service.config.dict()
+    return guardian_service.config.model_dump()
 
 @router.post("/api/risk/config")
 async def update_risk_config(updates: dict):
     from src.application.services.guardian_service import guardian_service
     guardian_service.update_config(updates)
-    return {"status": "ok", "config": guardian_service.config.dict()}
+    return {"status": "ok", "config": guardian_service.config.model_dump()}
 
 # --- Recent Events Cache (In-Memory) ---
 recent_signals = deque(maxlen=50)
@@ -284,9 +284,8 @@ async def broadcast_event_to_ws(event):
             msg = event.model_dump_json()
         elif hasattr(event, "json") and callable(event.json):
             msg = event.json()
-        elif hasattr(event, "dict") and callable(event.dict):
-            # Fallback for old pydantic or custom dict
-            msg = json.dumps(event.dict(), default=datetime_handler)
+        elif hasattr(event, "model_dump") and callable(event.model_dump):
+            msg = json.dumps(event.model_dump(), default=datetime_handler)
         else:
             msg = json.dumps(event.__dict__, default=datetime_handler)
             
@@ -308,5 +307,5 @@ def setup_ws_subscriber():
         event_bus.subscribe("*", broadcast_event_to_ws)
         log.info("WS broadcaster registered in EventBus.")
 
-# Chamado pelo startup_event em main.py via setup_ws_subscriber()
+# Registrado na importação do módulo (idempotente — guard em setup_ws_subscriber evita duplicate no hot-reload)
 setup_ws_subscriber()

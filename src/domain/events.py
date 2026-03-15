@@ -21,7 +21,7 @@ class SignalGenerated(BaseEvent):
     def __init__(self, signal: Signal, **data):
         if "component" not in data:
             data["component"] = "StrategyEngine"
-        super().__init__(payload=signal.dict(), correlation_id=signal.id, **data)
+        super().__init__(payload=signal.model_dump(), correlation_id=signal.id, **data)
 
 class OrderDrafted(BaseEvent):
     type: str = "ORDER_DRAFTED"
@@ -29,7 +29,7 @@ class OrderDrafted(BaseEvent):
     def __init__(self, draft: DraftOrder, **data):
         if "component" not in data:
             data["component"] = "ArbiterService"
-        super().__init__(payload=draft.dict(), correlation_id=draft.intent_id, **data)
+        super().__init__(payload=draft.model_dump(), correlation_id=draft.intent_id, **data)
 
 class OrderApproved(BaseEvent):
     type: str = "ORDER_APPROVED"
@@ -37,13 +37,13 @@ class OrderApproved(BaseEvent):
     def __init__(self, order: Order, **data):
         if "component" not in data:
             data["component"] = "GuardianService"
-        super().__init__(payload=order.dict(), correlation_id=order.intent_id, **data)
+        super().__init__(payload=order.model_dump(), correlation_id=order.intent_id, **data)
 
 class OrderRejected(BaseEvent):
     type: str = "ORDER_REJECTED"
     severity: Severity = Severity.WARNING
     def __init__(self, reason: str, draft: DraftOrder, gate: str, **data):
-        payload = {"reason": reason, "gate": gate, "draft": draft.dict()}
+        payload = {"reason": reason, "gate": gate, "draft": draft.model_dump()}
         if "component" not in data:
             data["component"] = "GuardianService"
         super().__init__(payload=payload, correlation_id=draft.intent_id, **data)
@@ -101,7 +101,7 @@ class PositionAdopted(BaseEvent):
     def __init__(self, trade: Trade, **data):
         if "component" not in data:
             data["component"] = "ExecutionService"
-        super().__init__(payload=trade.dict(), correlation_id=str(trade.ticket), **data)
+        super().__init__(payload=trade.model_dump(), correlation_id=str(trade.ticket), **data)
 
 class PositionDesyncClosed(BaseEvent):
     type: str = "POSITION_DESYNC_CLOSED"

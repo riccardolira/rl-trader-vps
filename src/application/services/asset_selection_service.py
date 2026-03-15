@@ -492,8 +492,8 @@ class AssetSelectionService:
                 payload={
                     "cycle_id": self._cycle_id, 
                     "count": len(ranking_candidates),
-                    "counts": self._counts.dict(),
-                    "reasons": self._reasons.dict()
+                    "counts": self._counts.model_dump(),
+                    "reasons": self._reasons.model_dump()
                 }
             )
         ))
@@ -962,7 +962,7 @@ class AssetSelectionService:
         try:
             snap = self.get_snapshot()
             asyncio.create_task(event_bus.publish(
-                BaseEvent(type="UNIVERSE_SNAPSHOT", component="Scanner", payload=snap.dict())
+                BaseEvent(type="UNIVERSE_SNAPSHOT", component="Scanner", payload=snap.model_dump())
             ))
         except Exception as e:
             log.error(f"Failed to broadcast snapshot: {e}")

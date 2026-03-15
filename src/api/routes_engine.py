@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/engine", tags=["Engine"])
 @router.get("/config")
 async def get_engine_config():
     """Retorna a configuração atual do motor (engine_config.json)."""
-    return engine_config_service.get().dict()
+    return engine_config_service.get().model_dump()
 
 
 @router.post("/config")
@@ -24,7 +24,7 @@ async def update_engine_config(updates: dict):
     try:
         updated = engine_config_service.update(updates)
         log.info(f"EngineConfig atualizado via API: {list(updates.keys())}")
-        return {"status": "ok", "config": updated.dict()}
+        return {"status": "ok", "config": updated.model_dump()}
     except Exception as e:
         log.error(f"EngineConfig: Erro ao atualizar: {e}")
         return {"status": "error", "message": str(e)}

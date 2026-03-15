@@ -64,7 +64,7 @@ class ExecutionService:
                     trades_list = []
                     from src.application.services.asset_selection_service import asset_selection_service
                     for p in positions:
-                        p_dict = p.dict()
+                        p_dict = p.model_dump()
                         
                         # Fix: Strategy Name is now natively stored in the Magic Number!
                         from src.domain.models import get_strategy_for_magic

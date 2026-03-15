@@ -28,7 +28,7 @@ async def get_snapshot():
 @router.get("/diagnostics")
 async def get_diagnostics():
     from src.infra.mt5.mt5_worker_client import mt5_worker_client
-    snap = asset_selection_service.get_snapshot().dict()
+    snap = asset_selection_service.get_snapshot().model_dump()
     
     # Enrich with MT5 status
     snap["mt5_connected"] = mt5_worker_client.is_healthy

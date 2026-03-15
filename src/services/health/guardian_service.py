@@ -10,10 +10,11 @@ from src.infrastructure.logger import log
 from src.infrastructure.config import settings
 from src.infrastructure.event_bus import event_bus
 
-class GuardianService:
+class ProcessWatchdog:
     """
-    Subsystem: Health Guardian
+    Subsystem: Health Watchdog (Process Guardian)
     Responsibility: Monitor MT5 terminal process, check external network, and perform hard self-healing.
+    NOTE: This is NOT the RiskGuardian (application/services/guardian_service.py).
     """
     def __init__(self):
         self.internet_ok = True
@@ -124,4 +125,6 @@ class GuardianService:
             "hard_restarts": self.hard_restarts_count
         }
 
-guardian_service = GuardianService()
+process_watchdog = ProcessWatchdog()
+# Alias de compatibilidade (mantém imports antigos funcionando durante a migração)
+guardian_service = process_watchdog

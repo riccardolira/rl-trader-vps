@@ -20,7 +20,7 @@ async def get_strategies_config():
 @router.put("/config/{strategy_name}")
 async def update_strategy_config(strategy_name: str, payload: StrategyUpdateRequest):
     """Updates the dynamic configuration of a specific strategy."""
-    updates = payload.dict(exclude_unset=True)
+    updates = payload.model_dump(exclude_unset=True)
     success = strategy_config_service.update_strategy(strategy_name, updates)
     if not success:
         raise HTTPException(status_code=404, detail="Strategy not found")

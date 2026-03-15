@@ -102,7 +102,7 @@ class EngineConfigService:
 
     def update(self, updates: dict) -> EngineConfig:
         """Merge recursivo dos campos recebidos no config atual."""
-        current = self.config.dict()
+        current = self.config.model_dump()
         deep_merge(current, updates)
         self.config = EngineConfig(**current)
         self._save(self.config)
