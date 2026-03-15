@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Moon, Sun, Settings, Square, Zap, Play, Radar, Cpu, BarChart3, ScrollText, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Moon, Sun, Settings, OctagonAlert, Zap, Play, Radar, Cpu, BarChart3, ScrollText, TrendingUp, TrendingDown, AlertTriangle, Square } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../lib/utils';
 import { api } from '../../services/api';
@@ -21,10 +21,10 @@ interface SessionStats {
 }
 
 const NAV_ITEMS = [
-    { id: 'scanner',    path: '/scanner',    label: 'Scanner',   icon: Radar },
-    { id: 'operations', path: '/operations', label: 'Motor',     icon: Cpu },
-    { id: 'analytics',  path: '/analytics',  label: 'Analytics', icon: BarChart3 },
-    { id: 'logs',       path: '/logs',       label: 'Logs',      icon: ScrollText },
+    { id: 'scanner',    path: '/scanner',    label: 'Scanner',    icon: Radar },
+    { id: 'operations', path: '/operations', label: 'Operações',  icon: Cpu },
+    { id: 'analytics',  path: '/analytics',  label: 'Analytics',  icon: BarChart3 },
+    { id: 'logs',       path: '/logs',       label: 'Auditoria',  icon: ScrollText },
 ];
 
 export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpen }) => {
@@ -117,12 +117,12 @@ export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpe
 
                 {/* Logo */}
                 <div className="flex items-center gap-2.5 shrink-0">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-blue-600/10 border border-blue-500/20 flex items-center justify-center">
-                        <span className="text-blue-400 font-black text-sm tracking-tighter">RL</span>
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20 flex items-center justify-center">
+                        <span className="text-primary font-black text-sm tracking-tighter">RL</span>
                     </div>
                     <div className="hidden sm:flex flex-col">
                         <span className="font-bold text-foreground text-sm leading-tight">RL Trader</span>
-                        <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Control Tower</span>
+                        <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Control Tower</span>
                     </div>
                 </div>
 
@@ -190,14 +190,14 @@ export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpe
                         onClick={triggerPanic}
                         disabled={isPanicking}
                         className={cn(
-                            "flex items-center gap-1 px-3 py-1.5 rounded-md border text-[10px] uppercase tracking-wider font-black transition-all",
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[10px] uppercase tracking-wider font-black transition-all",
                             isPanicking
                                 ? "bg-rose-900 text-rose-200 border-rose-700 cursor-not-allowed animate-pulse"
                                 : "bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-[0_0_12px_rgba(225,29,72,0.35)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] hover:-translate-y-px"
                         )}
                     >
-                        <Square size={10} fill="currentColor" />
-                        {isPanicking ? 'KILLING...' : 'PANIC'}
+                        <OctagonAlert size={11} />
+                        {isPanicking ? 'Encerrando...' : 'Panic'}
                     </button>
 
                     <div className="h-6 w-px bg-border/40 mx-1" />
@@ -237,7 +237,7 @@ export const Topbar: React.FC<TopbarProps> = ({ isSettingsOpen, setIsSettingsOpe
                             className={cn(
                                 "flex items-center gap-1.5 px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 border-b-2 -mb-px whitespace-nowrap",
                                 isActive
-                                    ? "border-blue-500 text-blue-400"
+                                    ? "border-primary text-primary"
                                     : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                             )}
                         >

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ScrollText, Cpu, PieChart, X } from 'lucide-react';
+import { Radar, ScrollText, Cpu, PieChart, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
@@ -25,10 +25,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileM
     const activeTab = getActiveTabId();
 
     const navItems = [
-        { id: 'scanner', path: '/scanner', label: 'Scanner', icon: LayoutDashboard },
-        { id: 'operations', path: '/operations', label: 'Motor de Operações', icon: Cpu },
+        { id: 'scanner', path: '/scanner', label: 'Scanner', icon: Radar },
+        { id: 'operations', path: '/operations', label: 'Operações', icon: Cpu },
         { id: 'analytics', path: '/analytics', label: 'Analytics', icon: PieChart },
-        { id: 'logs', path: '/logs', label: 'Logs & Transparência', icon: ScrollText },
+        { id: 'logs', path: '/logs', label: 'Logs & Auditoria', icon: ScrollText },
     ];
 
     return (
@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileM
                         </div>
                         <div className="flex flex-col justify-center">
                             <h1 className="font-bold text-foreground/90 leading-tight tracking-tight text-sm">RL Trader</h1>
-                            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-widest font-bold">V3.0 Control Tower</span>
+                            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-semibold">Control Tower</span>
                         </div>
                     </div>
                     {/* Close button for Mobile Drawer */}

@@ -84,7 +84,7 @@ export const DaySessionCard: React.FC = () => {
                     {pnlPositive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                     P&L Hoje
                 </span>
-                <span className={cn("text-3xl font-black font-mono tracking-tighter", pnlPositive ? "text-emerald-400" : "text-rose-400")}>
+                <span className={cn("text-3xl font-black font-mono tracking-tighter", pnlPositive ? "text-emerald-500" : "text-rose-500")}>
                     {pnlPositive ? '+' : ''}{session.daily_pnl.toFixed(2)}
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-0.5">USD</span>
@@ -103,7 +103,7 @@ export const DaySessionCard: React.FC = () => {
                         <Area type="monotone" dataKey="val" stroke={curveColor} strokeWidth={2} fill="url(#sparkGrad)" isAnimationActive={false} dot={false} />
                         <Tooltip
                             contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: 8, fontSize: 11 }}
-                            formatter={(v: any) => [`$${v}`, 'P&L']}
+                            formatter={(v: any) => [`$${v}`, 'P&L do Dia']}
                             labelFormatter={() => ''}
                         />
                     </AreaChart>
@@ -116,19 +116,19 @@ export const DaySessionCard: React.FC = () => {
                 <StatChip
                     label="Win Rate"
                     value={`${session.win_rate_today}%`}
-                    color={session.win_rate_today >= 50 ? 'text-emerald-400' : 'text-amber-400'}
+                    color={session.win_rate_today >= 50 ? 'text-emerald-500' : 'text-amber-500'}
                     icon={<Trophy size={9} />}
                 />
                 <StatChip
                     label="Wins"
                     value={session.wins_today}
-                    color="text-emerald-400"
+                    color="text-emerald-500"
                     icon={<Target size={9} />}
                 />
                 <StatChip
                     label="Losses"
                     value={session.losses_today}
-                    color={session.losses_today > 0 ? 'text-rose-400' : 'text-muted-foreground'}
+                    color={session.losses_today > 0 ? 'text-rose-500' : 'text-muted-foreground'}
                     icon={<AlertCircle size={9} />}
                 />
                 {session.biggest_loss < 0 && (

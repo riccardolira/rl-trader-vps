@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import React from 'react';
-import { TrendingUp, TrendingDown, Zap, ShieldCheck, Cpu, AlertTriangle, SlidersHorizontal, Layers } from 'lucide-react';
+import { TrendingUp, TrendingDown, Zap, ShieldCheck, Cpu, AlertTriangle, SlidersHorizontal, Layers, Globe, Flame, Activity } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { api } from '../services/api';
 import type { EngineState } from '../services/api';
@@ -209,19 +209,19 @@ const PositionCard = React.memo(({ pos, handleClosePosition }: { pos: any, handl
                     <span className={cn("font-bold text-2xl tracking-tighter", (pos.pnl ?? pos.profit) >= 0 ? "text-emerald-500" : "text-rose-500")}>
                         {(pos.pnl ?? pos.profit) >= 0 ? '+' : ''}{(pos.pnl ?? pos.profit)?.toFixed(2)}
                     </span>
-                    <span className="text-[10px] font-mono text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity">TICKET #{pos.ticket}</span>
+                    <span className="text-[10px] font-mono text-muted-foreground/50 transition-opacity">#{pos.ticket}</span>
                 </div>
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-center z-10 pl-2 gap-4">
                 <div className="flex flex-wrap items-center gap-4 text-xs font-mono w-full md:w-auto">
                     <div className="bg-muted/30 px-3 py-1.5 rounded-lg border border-border/50 flex flex-col">
-                        <span className="text-muted-foreground/70 text-[10px] uppercase mb-0.5">Entry</span>
+                        <span className="text-muted-foreground/70 text-[10px] uppercase mb-0.5">Entrada</span>
                         <span className="text-foreground/90 font-bold">{Number(pos.open_price || pos.price_open)?.toFixed(5) || 'N/A'}</span>
                     </div>
 
                     <div className="px-3 py-1.5 rounded-lg bg-muted/60 border border-border/50 flex flex-col">
-                        <span className="text-muted-foreground/70 text-[10px] uppercase mb-0.5">Mark</span>
+                        <span className="text-muted-foreground/70 text-[10px] uppercase mb-0.5">Preço Atual</span>
                         <span className={cn("font-bold text-sm", (pos.pnl ?? pos.profit) >= 0 ? "text-emerald-500" : "text-rose-500")}>
                             {current !== undefined ? current.toFixed(5) : '...'}
                         </span>
@@ -229,7 +229,7 @@ const PositionCard = React.memo(({ pos, handleClosePosition }: { pos: any, handl
 
                     {pos.tp && pos.tp > 0 ? (
                         <div className="text-emerald-500 bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/20 flex flex-col">
-                            <span className="font-bold text-[10px] uppercase mb-0.5">Win</span>
+                            <span className="font-bold text-[10px] uppercase mb-0.5">Alvo</span>
                             <span className="text-[11px] font-semibold">{(() => {
                                 const diff = Math.abs(Number(pos.open_price || pos.price_open) - Number(pos.tp));
                                 return formatPnlEstimate(diff, pos.symbol, Number(pos.volume) || 0.01, pos.asset_class);
@@ -240,7 +240,7 @@ const PositionCard = React.memo(({ pos, handleClosePosition }: { pos: any, handl
                     {pos.sl && pos.sl > 0 ? (
                         <div className="text-rose-500 bg-rose-500/5 px-3 py-1.5 rounded-lg border border-rose-500/20 flex flex-col relative group/sl">
                             <span className="font-bold text-[10px] uppercase mb-0.5 flex items-center gap-1">
-                                Loss
+                                Stop
                                 {(() => {
                                     // Visual cue for Break Even or Trailing Stop if SL moved beyond open price
                                     const isBuy = pos.side === 'BUY';
@@ -285,10 +285,10 @@ export const OperationsPage: React.FC = () => {
 
     const tabs = [
         { id: 'signals', label: 'Sinais', icon: Zap },
-        { id: 'positions', label: 'Trades Ativos', icon: Cpu },
-        { id: 'strategies', label: 'Estratégia (Tuning)', icon: SlidersHorizontal },
-        { id: 'risk', label: 'Risco (Parameters)', icon: ShieldCheck },
-        { id: 'engine', label: 'Engine Tuning', icon: Layers },
+        { id: 'positions', label: 'Trades Abertos', icon: Activity },
+        { id: 'strategies', label: 'Estratégia', icon: SlidersHorizontal },
+        { id: 'risk', label: 'Risco', icon: ShieldCheck },
+        { id: 'engine', label: 'Motor', icon: Layers },
     ] as const;
 
     useEffect(() => {
@@ -360,8 +360,8 @@ export const OperationsPage: React.FC = () => {
             <header className="flex flex-col gap-4 mb-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">Motor de Operações</h2>
-                        <p className="text-sm text-muted-foreground mt-1">Live Execution Pipeline (Strategy ➔ Arbiter ➔ Broker)</p>
+                        <h2 className="text-2xl font-bold tracking-tight">Motor de Operações</h2>
+                        <p className="text-sm text-muted-foreground mt-1">Pipeline de Execução ao Vivo — Estratégia → Árbitro → Broker</p>
                     </div>
 
                     <div className="flex gap-2 items-center">
@@ -386,19 +386,23 @@ export const OperationsPage: React.FC = () => {
                 </div>
 
                 <div className="bg-card border-b border-border/50 p-4 rounded-xl flex flex-wrap gap-4 items-center">
-                    <div className={cn("flex items-center gap-2 px-3 py-1 bg-muted/50 border border-border/50 rounded flex-1", engineState?.strategy_engine?.running ? "bg-emerald-500/10 border-emerald-500/30" : "")}>
+                    <div className={cn("flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border/50 rounded-lg flex-1", engineState?.strategy_engine?.running ? "bg-emerald-500/10 border-emerald-500/30" : "")}>
                         <span className={cn("w-2 h-2 rounded-full", engineState?.strategy_engine?.running ? "bg-emerald-500 animate-pulse" : "bg-neutral-500")} />
-                        <span className="font-mono text-sm font-semibold">
-                            STRATEGY ENGINE: {engineState?.strategy_engine?.running ? "ACTIVE" : "STOPPED"}
+                        <span className="font-semibold text-sm">
+                            Strategy Engine: <span className={engineState?.strategy_engine?.running ? "text-emerald-500 font-bold" : "text-muted-foreground"}>{engineState?.strategy_engine?.running ? "Ativo" : "Parado"}</span>
                         </span>
                     </div>
-                    <div className={cn("flex items-center gap-2 px-3 py-1 bg-muted/50 border border-border/50 rounded flex-1", engineState?.arbiter ? "bg-emerald-500/10 border-emerald-500/30" : "")}>
+                    <div className={cn("flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border/50 rounded-lg flex-1", engineState?.arbiter ? "bg-emerald-500/10 border-emerald-500/30" : "")}>
                         <span className={cn("w-2 h-2 rounded-full", engineState?.arbiter ? "bg-emerald-500 animate-pulse" : "bg-neutral-500")} />
-                        <span className="font-mono text-sm font-semibold">ARBITER: {engineState?.arbiter ? "ACTIVE" : "WAITING"}</span>
+                        <span className="font-semibold text-sm">
+                            Árbitro: <span className={engineState?.arbiter ? "text-emerald-500 font-bold" : "text-muted-foreground"}>{engineState?.arbiter ? "Ativo" : "Aguardando"}</span>
+                        </span>
                     </div>
-                    <div className={cn("flex items-center gap-2 px-3 py-1 bg-muted/50 border border-border/50 rounded flex-1", engineState?.execution?.status === "RUNNING" ? "bg-emerald-500/10 border-emerald-500/30" : "")}>
+                    <div className={cn("flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border/50 rounded-lg flex-1", engineState?.execution?.status === "RUNNING" ? "bg-emerald-500/10 border-emerald-500/30" : "")}>
                         <span className={cn("w-2 h-2 rounded-full", engineState?.execution?.status === "RUNNING" ? "bg-emerald-500 animate-pulse" : "bg-neutral-500")} />
-                        <span className="font-mono text-sm font-semibold">EXECUTION: {engineState?.execution?.status || "WAITING"}</span>
+                        <span className="font-semibold text-sm">
+                            Execução: <span className={engineState?.execution?.status === "RUNNING" ? "text-emerald-500 font-bold" : "text-muted-foreground"}>{engineState?.execution?.status === "RUNNING" ? "Ativo" : (engineState?.execution?.status || "Aguardando")}</span>
+                        </span>
                     </div>
                 </div>
 
@@ -406,10 +410,10 @@ export const OperationsPage: React.FC = () => {
                 {engineState?.guardian && (
                     <div className="bg-card border-b border-border p-2 rounded-b-lg flex flex-wrap gap-4 items-center justify-end">
                         <div className={cn("flex items-center gap-2 px-3 py-1 rounded text-xs font-bold border", engineState.guardian.internet_ok ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" : "bg-destructive/10 text-destructive border-destructive/30 animate-pulse")}>
-                            {engineState.guardian.internet_ok ? '🌐 INTERNET: ONLINE' : '⚠️ INTERNET: OFFLINE'}
+                            <Globe size={12} /> Internet: {engineState.guardian.internet_ok ? 'Online' : 'Offline'}
                         </div>
                         <div className={cn("flex items-center gap-2 px-3 py-1 rounded text-xs font-bold border", engineState.guardian.mt5_running ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" : "bg-destructive/10 text-destructive border-destructive/30 animate-pulse")}>
-                            {engineState.guardian.mt5_running ? '🚀 MT5.EXE: RUNNING' : '🔥 MT5.EXE: CRASHED'}
+                            {engineState.guardian.mt5_running ? <Cpu size={12} /> : <Flame size={12} />} MT5: {engineState.guardian.mt5_running ? 'Rodando' : 'Crashed'}
                         </div>
                         {engineState.guardian.hard_restarts > 0 && (
                             <div className="text-xs font-mono text-muted-foreground ml-2">
@@ -435,11 +439,11 @@ export const OperationsPage: React.FC = () => {
                         <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg flex items-center gap-3 animate-in fade-in shadow-sm">
                             <AlertTriangle className="animate-pulse" size={24} />
                             <div className="flex flex-col">
-                                <span className="font-bold text-sm tracking-wide">🚨 CIRCUIT BREAKER TRIPADO (LOCKDOWN DIÁRIO)</span>
-                                <span className="text-xs opacity-90 mt-0.5">
-                                    O limite máximo de perda diária foi atingido! O robô cancelou novas ordens e o motor de execução está desativado até o próximo dia.
-                                </span>
-                            </div>
+                            <span className="font-bold text-sm tracking-wide">Circuit Breaker Ativado — Lockdown Diário</span>
+                            <span className="text-xs opacity-90 mt-0.5">
+                                O limite máximo de perda diária foi atingido. Novas ordens canceladas. Motor desativado até amanhã.
+                            </span>
+                        </div>
                         </div>
                     );
                 }
@@ -449,11 +453,11 @@ export const OperationsPage: React.FC = () => {
                         <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 px-4 py-3 rounded-lg flex items-center gap-3 animate-in fade-in shadow-sm">
                             <AlertTriangle className="animate-pulse" size={24} />
                             <div className="flex flex-col">
-                                <span className="font-bold text-sm tracking-wide">SHIELD ATIVADO: BLOQUEIO DE NOTÍCIAS (LOCKDOWN)</span>
-                                <span className="text-xs opacity-90 mt-0.5">
-                                    O Motor de Operações está limitando entradas para ativos impactados pela alta volatilidade de notícias.
-                                </span>
-                            </div>
+                            <span className="font-bold text-sm tracking-wide">Shield Ativado — Bloqueio por Notícias</span>
+                            <span className="text-xs opacity-90 mt-0.5">
+                                Entradas limitadas nos ativos impactados pela volatilidade de notícias de alto impacto.
+                            </span>
+                        </div>
                         </div>
                     );
                 }

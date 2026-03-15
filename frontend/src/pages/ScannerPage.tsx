@@ -9,7 +9,7 @@ import { ScannerFiltersView } from '../components/universe/ScannerFiltersView';
 import { DaySessionCard } from '../components/common/DaySessionCard';
 import { api } from '../services/api';
 import type { UniverseSnapshot, RankingRow, UniverseConfig } from '../services/api';
-import { Layers, ListFilter, Settings, AlertTriangle, Activity, Calendar } from 'lucide-react';
+import { Layers, Filter, SlidersHorizontal, AlertTriangle, Activity, Newspaper } from 'lucide-react';
 import { uxWatchdog } from '../core/watchdog/uxWatchdog';
 import { wsClient } from '../core/net/wsClient';
 import { cn } from '../lib/utils';
@@ -194,26 +194,32 @@ export const ScannerPage = () => {
         <div className="space-y-6 h-full flex flex-col">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Universe & Selection</h2>
-                    <p className="text-sm text-muted-foreground mt-1">Global Asset Scanner & Universe Gate</p>
+                    <h2 className="text-2xl font-bold tracking-tight">Scanner de Ativos</h2>
+                    <p className="text-sm text-muted-foreground mt-1">Monitoramento global de universo e seleção de ativos</p>
                 </div>
 
                 <div className="flex gap-2 items-center">
                     {config && (
-                        <select
-                            className="bg-card border border-border rounded px-3 py-2 text-sm font-bold"
-                            value={config.selection_mode || 'AUTO'}
-                            onChange={handleModeChange}
-                        >
-                            <option value="AUTO">Mode: AUTO</option>
-                            <option value="MANUAL">Mode: MANUAL</option>
-                        </select>
-                    )}
-
-                    {config && (
-                        <div className="flex gap-2">
-                            <button onClick={forceRefresh} className="bg-secondary text-secondary-foreground px-4 py-2 flex items-center gap-2 rounded-md hover:bg-secondary/80 font-bold transition-colors">
-                                <Activity size={16} /> Force Refresh
+                        <div className="flex gap-2 items-center">
+                            {/* Segmented Control: Modo AUTO / MANUAL */}
+                            <div className="flex bg-muted/30 p-1 rounded-full border border-border/50 shadow-sm">
+                                {['AUTO', 'MANUAL'].map(mode => (
+                                    <button
+                                        key={mode}
+                                        onClick={() => handleModeChange({ target: { value: mode } } as any)}
+                                        className={cn(
+                                            "px-4 py-1 text-xs font-bold rounded-full transition-all duration-200 whitespace-nowrap",
+                                            (config.selection_mode || 'AUTO') === mode
+                                                ? "bg-background text-foreground shadow border border-border/50"
+                                                : "text-muted-foreground/80 hover:text-foreground"
+                                        )}
+                                    >
+                                        {mode === 'AUTO' ? 'Automático' : 'Manual'}
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={forceRefresh} className="bg-secondary text-secondary-foreground px-4 py-2 flex items-center gap-2 rounded-full hover:bg-secondary/80 font-semibold text-sm transition-colors">
+                                <Activity size={15} /> Forçar Scan
                             </button>
                         </div>
                     )}
@@ -254,8 +260,8 @@ export const ScannerPage = () => {
                         </div>
                     )}
                 </div>
-                <button onClick={() => setShowDiagnostics(true)} className="text-primary hover:underline font-medium flex items-center gap-1">
-                    Ver Diagnostics Completo &rarr;
+                <button onClick={() => setShowDiagnostics(true)} className="text-primary hover:underline font-medium flex items-center gap-1 text-sm">
+                    Ver diagnóstico completo →
                 </button>
             </div>
 
@@ -274,31 +280,31 @@ export const ScannerPage = () => {
                     to="/scanner/selection"
                     className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'selection' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <Layers size={16} /> Seleção de Ativos
+                    <Layers size={15} /> Seleção
                 </Link>
                 <Link
                     to="/scanner/schedule"
                     className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'schedule' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <Calendar size={16} /> Horário Operacional
+                    <Activity size={15} /> Horários
                 </Link>
                 <Link
                     to="/scanner/criteria"
                     className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'criteria' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <Settings size={16} /> Critérios
+                    <SlidersHorizontal size={15} /> Critérios
                 </Link>
                 <Link
                     to="/scanner/news"
                     className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'news' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <ListFilter size={16} /> Notícias
+                    <Newspaper size={15} /> Notícias
                 </Link>
                 <Link
                     to="/scanner/filters"
                     className={cn("flex items-center gap-2 px-4 py-1.5 text-sm font-bold rounded-full transition-all duration-200", activeTab === 'filters' ? "bg-background text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-border/50" : "text-muted-foreground/80 hover:text-foreground border border-transparent")}
                 >
-                    <Activity size={16} /> Filtros
+                    <Filter size={15} /> Filtros
                 </Link>
             </div>
 
@@ -412,10 +418,10 @@ export const ScannerPage = () => {
                 <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-card w-full max-w-3xl border border-border rounded-lg shadow-xl shadow-black/40 overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
-                            <h3 className="font-bold text-lg flex items-center gap-2"><Activity size={18} className="text-primary" /> Diagnostics Snapshot (JSON)</h3>
+                            <h3 className="font-bold text-lg flex items-center gap-2"><Activity size={18} className="text-primary" /> Diagnóstico do Sistema</h3>
                             <button onClick={() => setShowDiagnostics(false)} className="text-muted-foreground hover:text-foreground font-bold p-1">&times;</button>
                         </div>
-                        <div className="p-4 overflow-auto bg-black/50 text-[#a6e22e] text-sm font-mono whitespace-pre-wrap">
+                        <div className="p-4 overflow-auto bg-muted/80 dark:bg-black/50 text-emerald-400 text-sm font-mono whitespace-pre-wrap">
                             {JSON.stringify(snapshot, null, 2)}
                         </div>
                     </div>

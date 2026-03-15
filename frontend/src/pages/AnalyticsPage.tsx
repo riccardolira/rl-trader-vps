@@ -215,8 +215,8 @@ export const AnalyticsPage: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Analytics & Histórico</h2>
-                    <p className="text-sm text-muted-foreground mt-1">Inteligência Matemática, Ledger e Recomendações</p>
+                    <h2 className="text-2xl font-bold tracking-tight">Analytics</h2>
+                    <p className="text-sm text-muted-foreground mt-1">Performance, Ledger e Recomendações do Sistema</p>
                 </div>
 
                 <div className="flex flex-col gap-2 items-end">
@@ -254,13 +254,13 @@ export const AnalyticsPage: React.FC = () => {
                         onClick={() => setActiveTab('performance')}
                         className={cn("px-8 py-2 text-sm font-bold rounded-lg transition-all", activeTab === 'performance' ? "bg-background shadow-md text-foreground border border-border" : "text-muted-foreground hover:text-foreground")}
                     >
-                        Performance Overview
+                        Visão Geral
                     </button>
                     <button
                         onClick={() => setActiveTab('post-mortem')}
                         className={cn("px-8 py-2 text-sm font-bold rounded-lg transition-all", activeTab === 'post-mortem' ? "bg-background shadow-md text-primary border border-primary/20" : "text-muted-foreground hover:text-primary")}
                     >
-                        Post-Mortem Analytics
+                        Análise Post-Mortem
                     </button>
                 </div>
             </div>
@@ -673,7 +673,7 @@ export const AnalyticsPage: React.FC = () => {
                     <div className="bg-card border border-border p-5 rounded-xl flex-1 flex flex-col min-h-[500px]">
                         <h3 className="font-bold mb-4 flex items-center gap-2">
                             <Clock className="text-primary" size={18} />
-                            Ledger Histórico (Recentes)
+                            Histórico de Trades
                         </h3>
                         <div className="flex-1 w-full overflow-hidden">
                             <TradeHistory dataOverride={dashboardData.recent_ledger} onDeleteSuccess={fetchAll} periodPreset={periodPreset as any} />
@@ -686,10 +686,10 @@ export const AnalyticsPage: React.FC = () => {
                 <div className="bg-card border border-border p-5 rounded-xl flex-1 flex flex-col min-h-[500px]">
                     <h3 className="font-bold mb-4 flex items-center gap-2 text-primary">
                         <ShieldCheck className="text-primary" size={18} />
-                        Histórico Cirúrgico (Loss & Gain)
+                        Análise Post-Mortem
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                        Selecione um trade para abrir o Raio-X matemático do mercado no momento da entrada.
+                        Clique em um trade para ver o contexto matemático da entrada.
                     </p>
                     <div className="flex-1 w-full overflow-hidden">
                         <TradeHistory dataOverride={dashboardData.recent_ledger} onDeleteSuccess={fetchAll} periodPreset={periodPreset as any} onTradeClick={setSelectedTrade} />
