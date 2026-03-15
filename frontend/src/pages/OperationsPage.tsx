@@ -159,113 +159,127 @@ const SignalCard = React.memo(({ sig, draft }: { sig: any, draft?: any }) => {
 
 
 
-const PositionCard = React.memo(({ pos, handleClosePosition }: { pos: any, handleClosePosition: (t: number) => void }) => {
+const PositionRow = React.memo(({ pos, handleClosePosition }: { pos: any, handleClosePosition: (t: number) => void }) => {
     const rawCurrent = pos.price_current || pos.close_price;
     const current = rawCurrent && !isNaN(parseFloat(rawCurrent)) ? parseFloat(rawCurrent) : undefined;
+    const pnl = pos.pnl ?? pos.profit ?? 0;
+    const isBuy = pos.side === 'BUY';
+
+    // Break-even / trailing stop indicator
+    const slImproved = pos.sl && pos.sl > 0 && (
+        isBuy
+            ? Number(pos.sl) >= Number(pos.open_price || pos.price_open)
+            : Number(pos.sl) <= Number(pos.open_price || pos.price_open)
+    );
+
+    // Minutes until close
+    const timeLeft = pos.minutes_until_close != null ? (() => {
+        const min = Math.floor(pos.minutes_until_close);
+        if (min < 60) return `${min}m`;
+        return `${Math.floor(min / 60)}h${(min % 60).toString().padStart(2, '0')}`;
+    })() : null;
 
     return (
-        <div className="bg-card border border-border/50 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col gap-5 relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent to-transparent via-border/10 group-hover:via-primary/50 transition-colors" />
-            <div className="flex justify-between items-start z-10 pl-2">
-                <div className="flex flex-col gap-1.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-xl tracking-tight text-foreground/90">{pos.symbol}</span>
-                        <span className={cn(
-                            "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                            pos.side === 'BUY' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-500 border border-rose-500/30'
-                        )}>
-                            {pos.side}
-                        </span>
-                        <span className="text-[10px] font-mono bg-muted/80 px-2 py-0.5 rounded text-muted-foreground border border-border/50 font-bold">
-                            {pos.volume} Lots
-                        </span>
-                        {getAssetClassBadge(pos.symbol, pos.asset_class)}
-                        {pos.is_market_closed ? (
-                            <span className="text-[10px] font-bold uppercase bg-neutral-500/10 text-neutral-500 px-2 py-0.5 rounded border border-neutral-500/20 tracking-widest">
-                                FECHADO
-                            </span>
-                        ) : (
-                            <span className="text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded border border-emerald-500/20 tracking-widest flex items-center gap-1">
-                                ABERTO
-                                {pos.minutes_until_close !== undefined && pos.minutes_until_close !== null && (
-                                    <span className="text-[9px] bg-emerald-500/20 px-1.5 rounded ml-1 lowercase font-mono">
-                                        {(() => {
-                                            const min = Math.floor(pos.minutes_until_close);
-                                            if (min < 60) return `${min}m left`;
-                                            const h = Math.floor(min / 60);
-                                            const m = min % 60;
-                                            return `${h}h${m.toString().padStart(2, '0')}`;
-                                        })()}
-                                    </span>
-                                )}
-                            </span>
-                        )}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground/80 uppercase font-semibold tracking-wider">
-                        Estratégia: <span className="font-bold text-foreground/80">{pos.strategy_name || 'Sincronizando...'}</span>
-                    </div>
+        <div className={cn(
+            "group flex items-center gap-3 px-4 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors duration-150 relative",
+        )}>
+            {/* Colored side bar */}
+            <div className={cn(
+                "absolute left-0 top-0 bottom-0 w-[3px] rounded-r-sm",
+                isBuy ? "bg-emerald-500" : "bg-rose-500"
+            )} />
+
+            {/* Symbol + Direction + Strategy */}
+            <div className="flex flex-col min-w-[120px] pl-2">
+                <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm tracking-tight font-mono text-foreground">{pos.symbol}</span>
+                    <span className={cn(
+                        "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border",
+                        isBuy
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                            : "bg-rose-500/10 text-rose-500 border-rose-500/30"
+                    )}>{pos.side}</span>
                 </div>
-                <div className="text-right flex flex-col items-end mt-[-4px]">
-                    <span className={cn("font-bold text-2xl tracking-tighter", (pos.pnl ?? pos.profit) >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                        {(pos.pnl ?? pos.profit) >= 0 ? '+' : ''}{(pos.pnl ?? pos.profit)?.toFixed(2)}
+                <span className="text-[10px] text-muted-foreground/60 truncate max-w-[130px]">
+                    {pos.strategy_name || '—'}
+                </span>
+            </div>
+
+            {/* Volume + Asset Class */}
+            <div className="flex items-center gap-1.5 min-w-[80px]">
+                <span className="text-[10px] font-mono font-semibold text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded border border-border/40">
+                    {pos.volume}L
+                </span>
+                {getAssetClassBadge(pos.symbol, pos.asset_class)}
+            </div>
+
+            {/* Entry */}
+            <div className="flex flex-col min-w-[80px] hidden md:flex">
+                <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-wider mb-0.5">Entrada</span>
+                <span className="text-xs font-mono font-semibold text-foreground/80">
+                    {Number(pos.open_price || pos.price_open)?.toFixed(5) || '—'}
+                </span>
+            </div>
+
+            {/* Current price */}
+            <div className="flex flex-col min-w-[80px] hidden md:flex">
+                <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-wider mb-0.5">Atual</span>
+                <span className={cn("text-xs font-mono font-semibold", pnl >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                    {current !== undefined ? current.toFixed(5) : '…'}
+                </span>
+            </div>
+
+            {/* Alvo chip */}
+            <div className="hidden lg:flex flex-col min-w-[90px]">
+                <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-wider mb-0.5">Alvo</span>
+                {pos.tp && pos.tp > 0 ? (
+                    <span className="text-[10px] font-mono text-emerald-500 font-semibold">
+                        {formatPnlEstimate(Math.abs(Number(pos.open_price || pos.price_open) - Number(pos.tp)), pos.symbol, Number(pos.volume) || 0.01, pos.asset_class)}
                     </span>
-                    <span className="text-[10px] font-mono text-muted-foreground/50 transition-opacity">#{pos.ticket}</span>
-                </div>
+                ) : <span className="text-[10px] text-muted-foreground/30">—</span>}
             </div>
 
-            <div className="flex flex-col md:flex-row justify-between items-center z-10 pl-2 gap-4">
-                <div className="flex flex-wrap items-center gap-4 text-xs font-mono w-full md:w-auto">
-                    <div className="bg-muted/30 px-3 py-1.5 rounded-lg border border-border/50 flex flex-col">
-                        <span className="text-muted-foreground/70 text-[10px] uppercase mb-0.5">Entrada</span>
-                        <span className="text-foreground/90 font-bold">{Number(pos.open_price || pos.price_open)?.toFixed(5) || 'N/A'}</span>
-                    </div>
-
-                    <div className="px-3 py-1.5 rounded-lg bg-muted/60 border border-border/50 flex flex-col">
-                        <span className="text-muted-foreground/70 text-[10px] uppercase mb-0.5">Preço Atual</span>
-                        <span className={cn("font-bold text-sm", (pos.pnl ?? pos.profit) >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                            {current !== undefined ? current.toFixed(5) : '...'}
-                        </span>
-                    </div>
-
-                    {pos.tp && pos.tp > 0 ? (
-                        <div className="text-emerald-500 bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/20 flex flex-col">
-                            <span className="font-bold text-[10px] uppercase mb-0.5">Alvo</span>
-                            <span className="text-[11px] font-semibold">{(() => {
-                                const diff = Math.abs(Number(pos.open_price || pos.price_open) - Number(pos.tp));
-                                return formatPnlEstimate(diff, pos.symbol, Number(pos.volume) || 0.01, pos.asset_class);
-                            })()}</span>
-                        </div>
-                    ) : null}
-
-                    {pos.sl && pos.sl > 0 ? (
-                        <div className="text-rose-500 bg-rose-500/5 px-3 py-1.5 rounded-lg border border-rose-500/20 flex flex-col relative group/sl">
-                            <span className="font-bold text-[10px] uppercase mb-0.5 flex items-center gap-1">
-                                Stop
-                                {(() => {
-                                    // Visual cue for Break Even or Trailing Stop if SL moved beyond open price
-                                    const isBuy = pos.side === 'BUY';
-                                    const improved = isBuy ? Number(pos.sl) >= Number(pos.open_price || pos.price_open) : Number(pos.sl) <= Number(pos.open_price || pos.price_open);
-                                    if (improved) return <ShieldCheck size={10} className="text-emerald-500 animate-pulse" />;
-                                    return <TrendingUp size={10} className="opacity-0 group-hover/sl:opacity-100 group-hover/sl:animate-bounce transition-all duration-300" />;
-                                })()}
-                            </span>
-                            <span className="text-[11px] font-semibold">{(() => {
-                                const diff = Math.abs(Number(pos.open_price || pos.price_open) - Number(pos.sl));
-                                return formatPnlEstimate(diff, pos.symbol, Number(pos.volume) || 0.01, pos.asset_class);
-                            })()}</span>
-                        </div>
-                    ) : null}
-                </div>
-
-                <div className="w-full md:w-auto flex justify-center md:justify-end">
-                    <button
-                        onClick={() => handleClosePosition(Number(pos.ticket))}
-                        className="text-[11px] uppercase tracking-wider font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 px-6 py-2 rounded-xl transition-all shadow-sm hover:shadow"
-                    >
-                        Fechar a Mercado
-                    </button>
-                </div>
+            {/* Stop chip */}
+            <div className="hidden lg:flex flex-col min-w-[90px]">
+                <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-wider mb-0.5 flex items-center gap-1">
+                    Stop {slImproved && <ShieldCheck size={8} className="text-emerald-500" />}
+                </span>
+                {pos.sl && pos.sl > 0 ? (
+                    <span className="text-[10px] font-mono text-rose-500 font-semibold">
+                        {formatPnlEstimate(Math.abs(Number(pos.open_price || pos.price_open) - Number(pos.sl)), pos.symbol, Number(pos.volume) || 0.01, pos.asset_class)}
+                    </span>
+                ) : <span className="text-[10px] text-muted-foreground/30">—</span>}
             </div>
+
+            {/* Status badge + time */}
+            <div className="hidden sm:flex items-center gap-1.5 min-w-[80px]">
+                {pos.is_market_closed ? (
+                    <span className="text-[9px] font-bold uppercase bg-neutral-500/10 text-neutral-400 px-1.5 py-0.5 rounded border border-neutral-500/20 tracking-widest">Fechado</span>
+                ) : (
+                    <span className="text-[9px] font-bold uppercase bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 tracking-widest flex items-center gap-1">
+                        Aberto {timeLeft && <span className="opacity-70 normal-case font-mono">{timeLeft}</span>}
+                    </span>
+                )}
+            </div>
+
+            {/* P&L — main accent */}
+            <div className="ml-auto flex flex-col items-end shrink-0 min-w-[70px]">
+                <span className={cn("font-black text-base tracking-tight font-mono leading-none", pnl >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                    {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+                </span>
+                <span className="text-[9px] text-muted-foreground/40 font-mono">#{pos.ticket}</span>
+            </div>
+
+            {/* Close button — visible on hover */}
+            <button
+                onClick={() => handleClosePosition(Number(pos.ticket))}
+                title="Fechar a mercado"
+                className="ml-2 shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground/40 hover:text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition-all opacity-0 group-hover:opacity-100"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
         </div>
     );
 });
@@ -492,21 +506,75 @@ export const OperationsPage: React.FC = () => {
 
 
                 {activeTab === 'positions' && (
-                    <div className="flex flex-col h-full overflow-y-auto">
+                    <div className="flex flex-col h-full overflow-hidden">
                         {positions.length === 0 ? (
                             <div className="flex flex-col h-full items-center justify-center text-muted-foreground flex-1">
-                                <Cpu size={48} className="mb-4 opacity-50" />
-                                <p>Sem posições ativas sincronizadas com o servidor.</p>
+                                <Activity size={48} className="mb-4 opacity-30" />
+                                <p className="font-semibold">Sem posições abertas</p>
+                                <p className="text-sm opacity-60 mt-1">O motor está monitorando o mercado.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                                {positions.map((pos) => (
-                                    <PositionCard
-                                        key={pos.ticket}
-                                        pos={pos}
-                                        handleClosePosition={handleClosePosition}
-                                    />
-                                ))}
+                            <div className="flex flex-col h-full overflow-hidden">
+                                {/* Header row */}
+                                <div className="flex items-center gap-3 px-4 py-2 border-b border-border/50 bg-muted/20">
+                                    <div className="min-w-[120px] pl-2">
+                                        <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">Ativo</span>
+                                    </div>
+                                    <div className="min-w-[80px]">
+                                        <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">Vol / Classe</span>
+                                    </div>
+                                    <div className="min-w-[80px] hidden md:block">
+                                        <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">Entrada</span>
+                                    </div>
+                                    <div className="min-w-[80px] hidden md:block">
+                                        <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">Atual</span>
+                                    </div>
+                                    <div className="min-w-[90px] hidden lg:block">
+                                        <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">Alvo</span>
+                                    </div>
+                                    <div className="min-w-[90px] hidden lg:block">
+                                        <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">Stop</span>
+                                    </div>
+                                    <div className="min-w-[80px] hidden sm:block">
+                                        <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">Status</span>
+                                    </div>
+                                    <div className="ml-auto min-w-[70px] text-right pr-9">
+                                        <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">P&L</span>
+                                    </div>
+                                </div>
+
+                                {/* Position rows */}
+                                <div className="flex-1 overflow-y-auto">
+                                    {positions.map((pos) => (
+                                        <PositionRow
+                                            key={pos.ticket}
+                                            pos={pos}
+                                            handleClosePosition={handleClosePosition}
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Footer summary */}
+                                {(() => {
+                                    const totalPnl = positions.reduce((sum, p) => sum + (p.pnl ?? p.profit ?? 0), 0);
+                                    const buys = positions.filter(p => p.side === 'BUY').length;
+                                    const sells = positions.filter(p => p.side === 'SELL').length;
+                                    return (
+                                        <div className="border-t border-border/50 px-4 py-2.5 flex items-center justify-between bg-muted/10 shrink-0">
+                                            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                                                <span className="font-semibold">{positions.length} posição{positions.length !== 1 ? 'ões' : ''}</span>
+                                                {buys > 0 && <span className="text-emerald-500 font-bold">{buys} BUY</span>}
+                                                {sells > 0 && <span className="text-rose-500 font-bold">{sells} SELL</span>}
+                                            </div>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[9px] text-muted-foreground/50 uppercase font-bold tracking-widest">P&L Total</span>
+                                                <span className={cn("font-black text-sm font-mono tracking-tight", totalPnl >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                                                    {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         )}
                     </div>
